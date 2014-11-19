@@ -67,6 +67,11 @@ func (s *REST) Create(ctx kapi.Context, obj runtime.Object) (<-chan apiserver.RE
 	// you should not do this, but we have a bug right now that prevents us from trusting the ctx passed in
 	imageRepoCtx := kapi.WithNamespace(kapi.NewContext(), repo.Namespace)
 
+	// the our docker image repository hook needs to be updated to send name, but I don't know where lives.  I'm wiring this through for now
+	if len(mapping.Image.Name) == 0 {
+		mapping.Image.Name = mapping.Image.ID
+	}
+
 	if errs := validation.ValidateImageRepositoryMapping(mapping); len(errs) > 0 {
 		return nil, errors.NewInvalid("imageRepositoryMapping", mapping.Name, errs)
 	}

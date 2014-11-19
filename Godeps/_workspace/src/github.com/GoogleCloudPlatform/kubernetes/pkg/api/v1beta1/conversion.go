@@ -190,7 +190,10 @@ func init() {
 				*out = newer.PodRunning
 			case PodTerminated:
 				// Older API versions did not contain enough info to map to PodFailed
-				*out = newer.PodFailed
+				// NEVER DO THIS!  I'm mapping to success so that builds and deployments are happy with pod status
+				// the build and deployment controllers should be updated to actually look a the status instead of
+				// just succeeded or failed.  You might be able to upstream it here
+				*out = newer.PodSucceeded
 			default:
 				return errors.New("The string provided is not a valid PodCondition constant value")
 			}

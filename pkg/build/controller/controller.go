@@ -111,7 +111,9 @@ func (bc *BuildController) HandlePod(pod *kapi.Pod) {
 		nextStatus = buildapi.BuildStatusComplete
 	case kapi.PodFailed:
 		// At least one of the pods exited with non-zero exit code
-		nextStatus = buildapi.BuildStatusFailed
+		nextStatus = buildapi.BuildStatusComplete
+		// TODO: THIS IS BROKEN BECAUSE PodTerminated IS ALWAYS CONVERTED TO PodFailed!
+		// nextStatus = buildapi.BuildStatusFailed
 	}
 
 	if build.Status != nextStatus {

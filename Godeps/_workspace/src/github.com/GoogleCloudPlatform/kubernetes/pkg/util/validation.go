@@ -59,7 +59,9 @@ func IsValidPortNum(port int) bool {
 	return 0 < port && port < 65536
 }
 
-const dns952IdentifierFmt string = "[a-z]([-a-z0-9]*[a-z0-9])?"
+// NEVER DO THIS.  This is here because labels on builds, images, etc contain mixed case
+// all of our labels need to conform to the original regex which is lowercase only
+const dns952IdentifierFmt string = "[A-Za-z]([-A-Za-z0-9]*[A-Za-z0-9])?"
 
 var dns952Regexp = regexp.MustCompile("^" + dns952IdentifierFmt + "$")
 

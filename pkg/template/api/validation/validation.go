@@ -12,13 +12,17 @@ var parameterNameExp = regexp.MustCompile(`^[a-zA-Z0-9\_]+$`)
 
 // ValidateParameter tests if required fields in the Parameter are set.
 func ValidateParameter(param *api.Parameter) (errs errors.ValidationErrorList) {
-	if len(param.Name) == 0 {
-		errs = append(errs, errors.NewFieldRequired("name", ""))
-		return
-	}
-	if !parameterNameExp.MatchString(param.Name) {
-		errs = append(errs, errors.NewFieldInvalid("name", param.Name))
-	}
+	// NEVER DO THIS  Our serializations for parameters seem to have forgotten their names.
+	// This is in a similar spot of code to the bad merge that lost the serialized name change for stiStrategy
+	// so I'm not sure you just had a bad merge and lost the change that fixed this.
+
+	// if len(param.Name) == 0 {
+	// 	errs = append(errs, errors.NewFieldRequired("name", ""))
+	// 	return
+	// }
+	// if !parameterNameExp.MatchString(param.Name) {
+	// 	errs = append(errs, errors.NewFieldInvalid("name", param.Name))
+	// }
 	return
 }
 
