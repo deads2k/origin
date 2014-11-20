@@ -14,12 +14,10 @@ type ImageList struct {
 
 // Image is an immutable representation of a Docker image and metadata at a point in time.
 type Image struct {
-	kapi.TypeMeta   `json:",inline" yaml:",inline"`
-	kapi.ObjectMeta `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-	// the our docker image repository hook needs to be updated to send name, but I don't know where lives.  I'm wiring this through for now
-	ID                   string       `json:"id,omitempty" yaml:"id,omitempty"`
+	kapi.TypeMeta        `json:",inline" yaml:",inline"`
+	kapi.ObjectMeta      `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	DockerImageReference string       `json:"dockerImageReference,omitempty" yaml:"dockerImageReference,omitempty"`
-	Metadata             docker.Image `json:"meta,omitempty" yaml:"meta,omitempty"`
+	DockerImageMetadata  docker.Image `json:"dockerImageMetadata,omitempty" yaml:"dockerImageMetadata,omitempty"`
 }
 
 // ImageRepositoryList is a list of ImageRepository objects.
