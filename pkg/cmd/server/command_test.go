@@ -192,18 +192,16 @@ func TestCommandCompletionNode(t *testing.T) {
 	commandCompletionTest{
 		args: []string{"node"},
 
-		ExplicitStartNode: true,
-		StartNode:         true,
+		StartNode: true,
 	}.run(t)
 }
 func TestCommandCompletionMaster(t *testing.T) {
 	commandCompletionTest{
 		args: []string{"master"},
 
-		ExplicitStartMaster: true,
-		StartMaster:         true,
-		StartKube:           true,
-		StartEtcd:           true,
+		StartMaster: true,
+		StartKube:   true,
+		StartEtcd:   true,
 	}.run(t)
 }
 func TestCommandCompletionAllInOne(t *testing.T) {
@@ -218,12 +216,10 @@ func TestCommandCompletionAllInOne(t *testing.T) {
 type commandCompletionTest struct {
 	args []string
 
-	ExplicitStartNode   bool
-	ExplicitStartMaster bool
-	StartNode           bool
-	StartMaster         bool
-	StartKube           bool
-	StartEtcd           bool
+	StartNode   bool
+	StartMaster bool
+	StartKube   bool
+	StartEtcd   bool
 }
 
 func executeCommand(args []string) *Config {
@@ -252,12 +248,6 @@ func executeCommand(args []string) *Config {
 func (test commandCompletionTest) run(t *testing.T) {
 	actualCfg := executeCommand(test.args)
 
-	if test.ExplicitStartNode != actualCfg.ExplicitStartNode {
-		t.Errorf("expected %v, got %v", test.ExplicitStartNode, actualCfg.ExplicitStartNode)
-	}
-	if test.ExplicitStartMaster != actualCfg.ExplicitStartMaster {
-		t.Errorf("expected %v, got %v", test.ExplicitStartMaster, actualCfg.ExplicitStartNode)
-	}
 	if test.StartNode != actualCfg.StartNode {
 		t.Errorf("expected %v, got %v", test.StartNode, actualCfg.StartNode)
 	}

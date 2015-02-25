@@ -29,12 +29,10 @@ type Config struct {
 
 	WriteConfigOnly bool
 
-	ExplicitStartNode   bool
-	ExplicitStartMaster bool
-	StartNode           bool
-	StartMaster         bool
-	StartKube           bool
-	StartEtcd           bool
+	StartNode   bool
+	StartMaster bool
+	StartKube   bool
+	StartEtcd   bool
 
 	MasterAddr     flagtypes.Addr
 	BindAddr       flagtypes.Addr

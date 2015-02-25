@@ -119,33 +119,13 @@ func (cfg Config) Validate(args []string) error {
 
 // Complete takes the args and fills in information for the start config
 func (cfg *Config) Complete(args []string) {
-	cfg.ExplicitStartMaster = (len(args) == 1) && (args[0] == startMaster)
-	cfg.ExplicitStartNode = (len(args) == 1) && (args[0] == startNode)
+	cfg.StartMaster = (len(args) == 0) || (args[0] == startMaster)
+	cfg.StartNode = (len(args) == 0) || (args[0] == startNode)
 
-	cfg.StartNode = true
-	cfg.StartMaster = true
-	cfg.StartKube = true
-	cfg.StartEtcd = true
-
-	// if we're explicitly starting the master, don't start a node
-	if cfg.ExplicitStartMaster {
-		cfg.StartNode = false
-	}
-
-	// if we're explicitly starting a node, don't start anything else
-	if cfg.ExplicitStartNode {
-		cfg.StartMaster = false
-		cfg.StartKube = false
-		cfg.StartEtcd = false
-	}
-
-	// if we've explictly called out a kube location, don't start one in process
-	if cfg.KubernetesAddr.Provided {
-		cfg.StartKube = false
-	}
-
-	// if we've explicitly called out an etcd location, don't start one in process
-	if cfg.EtcdAddr.Provided {
-		cfg.StartEtcd = false
+	if cfg.StartMaster {
+		// if we've explicitly called out a kube location, don't start one in process
+		cfg.StartKube = !cfg.KubernetesAddr.Provided
+		// if we've explicitly called out an etcd location, don't start one in process
+		cfg.StartEtcd = !cfg.EtcdAddr.Provided
 	}
 }
