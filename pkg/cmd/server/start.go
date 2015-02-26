@@ -44,7 +44,9 @@ func (cfg Config) startMaster() error {
 	cfg.MintSystemClientCert("admin", "system:cluster-admins")
 	cfg.MintSystemClientCert("openshift-deployer", "system:deployers")
 	cfg.MintSystemClientCert("openshift-client")
-	cfg.MintSystemClientCert("kube-client")
+	if cfg.StartKube {
+		cfg.MintSystemClientCert("kube-client")
+	}
 
 	openshiftConfig, err := cfg.BuildOriginMasterConfig()
 	if err != nil {
@@ -109,20 +111,21 @@ func start(cfg Config, args []string) error {
 	}
 
 	switch {
-	case cfg.ExplicitStartMaster:
+	case cfg.StartMaster && cfg.StartNode:
+		glog.Infof("Starting an OpenShift all-in-one, reachable at %s (etcd: %s)", cfg.MasterAddr.String(), cfg.EtcdAddr.String())
+		if cfg.MasterPublicAddr.Provided {
+			glog.Infof("OpenShift master public address is %s", cfg.MasterPublicAddr.String())
+		}
+
+	case cfg.StartMaster:
 		glog.Infof("Starting an OpenShift master, reachable at %s (etcd: %s)", cfg.MasterAddr.String(), cfg.EtcdAddr.String())
 		if cfg.MasterPublicAddr.Provided {
 			glog.Infof("OpenShift master public address is %s", cfg.MasterPublicAddr.String())
 		}
 
-	case cfg.ExplicitStartNode:
+	case cfg.StartNode:
 		glog.Infof("Starting an OpenShift node, connecting to %s", cfg.MasterAddr.String())
 
-	default:
-		glog.Infof("Starting an OpenShift all-in-one, reachable at %s (etcd: %s)", cfg.MasterAddr.String(), cfg.EtcdAddr.String())
-		if cfg.MasterPublicAddr.Provided {
-			glog.Infof("OpenShift master public address is %s", cfg.MasterPublicAddr.String())
-		}
 	}
 
 	if cfg.StartEtcd {

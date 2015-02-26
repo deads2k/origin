@@ -3,6 +3,8 @@ package server
 import (
 	"testing"
 
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/client/clientcmd"
+	clientcmdapi "github.com/GoogleCloudPlatform/kubernetes/pkg/client/clientcmd/api"
 	"github.com/openshift/origin/pkg/cmd/util"
 )
 
@@ -47,10 +49,10 @@ func TestKubernetesPublicAddressDefaultToKubernetesAddress(t *testing.T) {
 
 	actual, err := cfg.GetKubernetesPublicAddress()
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if expected != actual.String() {
-		t.Errorf("expected %v, got %v", expected, actual)
+		t.Fatalf("expected %v, got %v", expected, actual)
 	}
 }
 
@@ -63,10 +65,10 @@ func TestKubernetesPublicAddressDefaultToPublicMasterAddress(t *testing.T) {
 
 	actual, err := cfg.GetKubernetesPublicAddress()
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if expected != actual.String() {
-		t.Errorf("expected %v, got %v", expected, actual)
+		t.Fatalf("expected %v, got %v", expected, actual)
 	}
 }
 
@@ -78,10 +80,10 @@ func TestKubernetesPublicAddressDefaultToMasterAddress(t *testing.T) {
 
 	actual, err := cfg.GetKubernetesPublicAddress()
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if expected != actual.String() {
-		t.Errorf("expected %v, got %v", expected, actual)
+		t.Fatalf("expected %v, got %v", expected, actual)
 	}
 }
 
@@ -96,10 +98,10 @@ func TestKubernetesPublicAddressExplicit(t *testing.T) {
 
 	actual, err := cfg.GetKubernetesPublicAddress()
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if expected != actual.String() {
-		t.Errorf("expected %v, got %v", expected, actual)
+		t.Fatalf("expected %v, got %v", expected, actual)
 	}
 }
 
@@ -111,10 +113,10 @@ func TestKubernetesAddressDefaulting(t *testing.T) {
 
 	actual, err := cfg.GetKubernetesAddress()
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if expected != actual.String() {
-		t.Errorf("expected %v, got %v", expected, actual)
+		t.Fatalf("expected %v, got %v", expected, actual)
 	}
 }
 
@@ -127,10 +129,10 @@ func TestKubernetesAddressExplicit(t *testing.T) {
 
 	actual, err := cfg.GetKubernetesAddress()
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if expected != actual.String() {
-		t.Errorf("expected %v, got %v", expected, actual)
+		t.Fatalf("expected %v, got %v", expected, actual)
 	}
 }
 
@@ -143,10 +145,10 @@ func TestEtcdAddressDefaulting(t *testing.T) {
 
 	actual, err := cfg.GetEtcdAddress()
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if expected != actual.String() {
-		t.Errorf("expected %v, got %v", expected, actual)
+		t.Fatalf("expected %v, got %v", expected, actual)
 	}
 }
 
@@ -159,10 +161,10 @@ func TestEtcdAddressExplicit(t *testing.T) {
 
 	actual, err := cfg.GetEtcdAddress()
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if expected != actual.String() {
-		t.Errorf("expected %v, got %v", expected, actual)
+		t.Fatalf("expected %v, got %v", expected, actual)
 	}
 }
 
@@ -172,7 +174,7 @@ func TestEtcdBindAddressDefault(t *testing.T) {
 	cfg := NewDefaultConfig()
 	actual := cfg.GetEtcdBindAddress()
 	if expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+		t.Fatalf("expected %v, got %v", expected, actual)
 	}
 }
 
@@ -182,7 +184,7 @@ func TestEtcdPeerAddressDefault(t *testing.T) {
 	cfg := NewDefaultConfig()
 	actual := cfg.GetEtcdPeerBindAddress()
 	if expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+		t.Fatalf("expected %v, got %v", expected, actual)
 	}
 }
 
@@ -194,14 +196,14 @@ func TestEtcdBindAddressDefaultToBind(t *testing.T) {
 
 	actual := cfg.GetEtcdBindAddress()
 	if expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+		t.Fatalf("expected %v, got %v", expected, actual)
 	}
 }
 
 func TestMasterAddressDefaultingToBindValues(t *testing.T) {
 	defaultIP, err := util.DefaultLocalIP4()
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	expected := "http://" + defaultIP.String() + ":9012"
 
@@ -211,10 +213,10 @@ func TestMasterAddressDefaultingToBindValues(t *testing.T) {
 
 	actual, err := cfg.GetMasterAddress()
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if expected != actual.String() {
-		t.Errorf("expected %v, got %v", expected, actual)
+		t.Fatalf("expected %v, got %v", expected, actual)
 	}
 }
 
@@ -226,9 +228,191 @@ func TestMasterAddressExplicit(t *testing.T) {
 
 	actual, err := cfg.GetMasterAddress()
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if expected != actual.String() {
-		t.Errorf("expected %v, got %v", expected, actual)
+		t.Fatalf("expected %v, got %v", expected, actual)
 	}
+}
+
+func TestKubeClientForExternalKubernetesMasterWithNoConfig(t *testing.T) {
+	expected := "https://localhost:8443"
+
+	cfg := NewDefaultConfig()
+	cfg.StartMaster = true
+	cfg.MasterAddr.Set(expected)
+
+	actual, err := cfg.GetKubernetesAddress()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if expected != actual.String() {
+		t.Fatalf("expected %v, got %v", expected, actual)
+	}
+
+	_, config, err := cfg.GetKubeClient()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if expected != config.Host {
+		t.Fatalf("expected %v, got %v", expected, config.Host)
+	}
+}
+
+func TestKubeClientForNodeWithNoConfig(t *testing.T) {
+	expected := "https://localhost:8443"
+
+	cfg := NewDefaultConfig()
+	cfg.StartNode = true
+	cfg.MasterAddr.Set(expected)
+
+	actual, err := cfg.GetKubernetesAddress()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if expected != actual.String() {
+		t.Fatalf("expected %v, got %v", expected, actual)
+	}
+
+	_, config, err := cfg.GetKubeClient()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if expected != config.Host {
+		t.Fatalf("expected %v, got %v", expected, config.Host)
+	}
+}
+
+func TestKubeClientForExternalKubernetesMasterWithConfig(t *testing.T) {
+	expectedServer := "https://some-other-server:1234"
+	expectedUser := "myuser"
+
+	cfg := NewDefaultConfig()
+	cfg.StartMaster = true
+	cfg.ClientConfigLoadingRules, cfg.ClientConfig = makeKubeconfig(expectedServer, expectedUser)
+
+	actual, err := cfg.GetKubernetesAddress()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if expectedServer != actual.String() {
+		t.Fatalf("expected %v, got %v", expectedServer, actual)
+	}
+
+	_, config, err := cfg.GetKubeClient()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if config.Host != expectedServer {
+		t.Fatalf("expected %v, got %v", expectedServer, config.Host)
+	}
+	if config.Username != expectedUser {
+		t.Fatalf("expected %v, got %v", expectedUser, config.Username)
+	}
+}
+
+func TestKubeClientForNodeWithConfig(t *testing.T) {
+	expectedServer := "https://some-other-server:1234"
+	expectedUser := "myuser"
+
+	cfg := NewDefaultConfig()
+	cfg.StartNode = true
+	cfg.ClientConfigLoadingRules, cfg.ClientConfig = makeKubeconfig(expectedServer, expectedUser)
+
+	actual, err := cfg.GetKubernetesAddress()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if expectedServer != actual.String() {
+		t.Fatalf("expected %v, got %v", expectedServer, actual)
+	}
+
+	_, config, err := cfg.GetKubeClient()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if config.Host != expectedServer {
+		t.Fatalf("expected %v, got %v", expectedServer, config.Host)
+	}
+	if config.Username != expectedUser {
+		t.Fatalf("expected %v, got %v", expectedUser, config.Username)
+	}
+}
+
+func TestKubeClientForExternalKubernetesMasterWithConflictingKubernetesAddress(t *testing.T) {
+	expectedServer := "https://some-other-server:1234"
+	expectedUser := "myuser"
+
+	cfg := NewDefaultConfig()
+	cfg.StartMaster = true
+	// Explicitly set --kubernetes must match --kubeconfig or return an error
+	cfg.KubernetesAddr.Set(expectedServer)
+	cfg.ClientConfigLoadingRules, cfg.ClientConfig = makeKubeconfig("https://another-server:2345", expectedUser)
+
+	// GetKubernetesAddress returns the explicitly set address
+	actual, err := cfg.GetKubernetesAddress()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if expectedServer != actual.String() {
+		t.Fatalf("expected %v, got %v", expectedServer, actual)
+	}
+
+	// Should not get a client that might let us send credentials to the wrong server
+	if _, _, err := cfg.GetKubeClient(); err == nil {
+		t.Fatalf("expected error, got none")
+	}
+}
+
+func TestKubeClientForNodeWithConflictingKubernetesAddress(t *testing.T) {
+	expectedServer := "https://some-other-server:1234"
+	expectedUser := "myuser"
+
+	cfg := NewDefaultConfig()
+	cfg.StartNode = true
+	cfg.KubernetesAddr.Set(expectedServer)
+	cfg.ClientConfigLoadingRules, cfg.ClientConfig = makeKubeconfig("https://another-server:2345", expectedUser)
+
+	// GetKubernetesAddress returns the explicitly set address
+	actualServer, err := cfg.GetKubernetesAddress()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if expectedServer != actualServer.String() {
+		t.Fatalf("expected %v, got %v", expectedServer, actualServer)
+	}
+
+	// Should not get a client that might let us send credentials to the wrong server
+	if _, _, err := cfg.GetKubeClient(); err == nil {
+		t.Fatalf("expected error, got none")
+	}
+}
+
+func makeEmptyKubeconfig() (clientcmd.ClientConfigLoadingRules, clientcmd.ClientConfig) {
+	// Set a non-empty CommandLinePath to trigger loading
+	loadingRules := clientcmd.ClientConfigLoadingRules{CommandLinePath: "specified"}
+
+	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		// Set empty loading rules to avoid missing file errors
+		&clientcmd.ClientConfigLoadingRules{},
+		&clientcmd.ConfigOverrides{},
+	)
+	return loadingRules, clientConfig
+}
+
+func makeKubeconfig(server, user string) (clientcmd.ClientConfigLoadingRules, clientcmd.ClientConfig) {
+	// Set a non-empty CommandLinePath to trigger loading
+	loadingRules := clientcmd.ClientConfigLoadingRules{CommandLinePath: "specified"}
+
+	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		// Set empty loading rules to avoid missing file errors
+		&clientcmd.ClientConfigLoadingRules{},
+		// Override the server and user in client config to simulate loading from a file
+		&clientcmd.ConfigOverrides{
+			ClusterInfo: clientcmdapi.Cluster{Server: server},
+			AuthInfo:    clientcmdapi.AuthInfo{Username: user},
+		},
+	)
+
+	return loadingRules, clientConfig
 }
