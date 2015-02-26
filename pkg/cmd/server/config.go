@@ -13,6 +13,7 @@ import (
 	etcdclient "github.com/coreos/go-etcd/etcd"
 	"github.com/golang/glog"
 
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/client"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/client/clientcmd"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/tools"
 
@@ -60,9 +61,12 @@ type Config struct {
 	NodeList flagtypes.StringList
 
 	// ClientConfig is used when connecting to Kubernetes from the master, or
-	// when connecting to the master from a detached node. If the server is an
-	// all-in-one, this value is not used.
+	// when connecting to the master from a detached node. If StartKube is true,
+	// this value is not used.
 	ClientConfig clientcmd.ClientConfig
+	// ClientConfigLoadingRules is the ruleset used to load the client config.
+	// Only the CommandLinePath is expected to be used.
+	ClientConfigLoadingRules clientcmd.ClientConfigLoadingRules
 
 	CORSAllowedOrigins flagtypes.StringList
 }
@@ -74,7 +78,7 @@ func NewDefaultConfig() *Config {
 		glog.Warningf("Unable to lookup hostname, using %q: %v", hostname, err)
 	}
 
-	return &Config{
+	config := &Config{
 		Docker: docker.NewHelper(),
 
 		MasterAddr:           flagtypes.Addr{Value: "localhost:8443", DefaultScheme: "https", DefaultPort: 8443, AllowPrefix: true}.Default(),
@@ -90,6 +94,10 @@ func NewDefaultConfig() *Config {
 		Hostname: hostname,
 		NodeList: flagtypes.StringList{"127.0.0.1"},
 	}
+
+	config.ClientConfig = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(&config.ClientConfigLoadingRules, &clientcmd.ConfigOverrides{})
+
+	return config
 }
 
 // GetMasterAddress checks for an unset master address and then attempts to use the first
@@ -100,38 +108,26 @@ func (cfg Config) GetMasterAddress() (*url.URL, error) {
 		return cfg.MasterAddr.URL, nil
 	}
 
-	if cfg.StartMaster {
-		// If the user specifies a bind address, and the master is not provided, use the bind port by default
-		port := cfg.MasterAddr.Port
-		if cfg.BindAddr.Provided {
-			port = cfg.BindAddr.Port
-		}
-
-		// If the user specifies a bind address, and the master is not provided, use the bind scheme by default
-		scheme := cfg.MasterAddr.URL.Scheme
-		if cfg.BindAddr.Provided {
-			scheme = cfg.BindAddr.URL.Scheme
-		}
-
-		// use the default ip address for the system
-		addr, err := util.DefaultLocalIP4()
-		if err != nil {
-			return nil, fmt.Errorf("Unable to find the public address of this master: %v", err)
-		}
-
-		masterAddr := scheme + "://" + net.JoinHostPort(addr.String(), strconv.Itoa(port))
-		return url.Parse(masterAddr)
+	// If the user specifies a bind address, and the master is not provided, use the bind port by default
+	port := cfg.MasterAddr.Port
+	if cfg.BindAddr.Provided {
+		port = cfg.BindAddr.Port
 	}
 
-	// if we didn't specify and we aren't starting the master, read .kubeconfig to locate the master
-	// TODO client config currently doesn't let you override the defaults
-	// so it is defaulting to https://localhost:8443 for MasterAddr if
-	// it isn't set by --master or --kubeconfig
-	config, err := cfg.ClientConfig.ClientConfig()
+	// If the user specifies a bind address, and the master is not provided, use the bind scheme by default
+	scheme := cfg.MasterAddr.URL.Scheme
+	if cfg.BindAddr.Provided {
+		scheme = cfg.BindAddr.URL.Scheme
+	}
+
+	// use the default ip address for the system
+	addr, err := util.DefaultLocalIP4()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Unable to find a public IP address: %v", err)
 	}
-	return url.Parse(config.Host)
+
+	masterAddr := scheme + "://" + net.JoinHostPort(addr.String(), strconv.Itoa(port))
+	return url.Parse(masterAddr)
 }
 
 func (cfg Config) GetMasterPublicAddress() (*url.URL, error) {
@@ -167,9 +163,28 @@ func (cfg Config) GetEtcdAddress() (*url.URL, error) {
 	return url.Parse("http://" + etcdAddr)
 }
 
+func (cfg Config) GetExternalKubernetesClientConfig() (*client.Config, bool, error) {
+	if len(cfg.ClientConfigLoadingRules.CommandLinePath) == 0 || cfg.ClientConfig == nil {
+		return nil, false, nil
+	}
+	clientConfig, err := cfg.ClientConfig.ClientConfig()
+	if err != nil {
+		return nil, false, err
+	}
+	return clientConfig, true, nil
+}
+
 func (cfg Config) GetKubernetesAddress() (*url.URL, error) {
 	if cfg.KubernetesAddr.Provided {
 		return cfg.KubernetesAddr.URL, nil
+	}
+
+	config, ok, err := cfg.GetExternalKubernetesClientConfig()
+	if err != nil {
+		return nil, err
+	}
+	if ok && len(config.Host) > 0 {
+		return url.Parse(config.Host)
 	}
 
 	return cfg.GetMasterAddress()
@@ -181,6 +196,13 @@ func (cfg Config) GetKubernetesPublicAddress() (*url.URL, error) {
 	}
 	if cfg.KubernetesAddr.Provided {
 		return cfg.KubernetesAddr.URL, nil
+	}
+	config, ok, err := cfg.GetExternalKubernetesClientConfig()
+	if err != nil {
+		return nil, err
+	}
+	if ok && len(config.Host) > 0 {
+		return url.Parse(config.Host)
 	}
 
 	return cfg.GetMasterPublicAddress()
