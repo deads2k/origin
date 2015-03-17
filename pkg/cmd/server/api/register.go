@@ -8,12 +8,10 @@ var Scheme = runtime.NewScheme()
 
 func init() {
 	Scheme.AddKnownTypes("",
-		&OpenShiftMasterConfig{},
-		&KubernetesMasterConfig{},
+		&MasterConfig{},
 		&NodeConfig{},
 	)
 }
 
-func (*OpenShiftMasterConfig) IsAnAPIObject()  {}
-func (*KubernetesMasterConfig) IsAnAPIObject() {}
-func (*NodeConfig) IsAnAPIObject()             {}
+func (*MasterConfig) IsAnAPIObject() {}
+func (*NodeConfig) IsAnAPIObject()   {}

@@ -35,7 +35,7 @@ type NodeConfig struct {
 	RecordEvents bool `json:"recordEvents"`
 }
 
-type OpenShiftMasterConfig struct {
+type MasterConfig struct {
 	v1beta3.TypeMeta `json:",inline"`
 
 	// ServingInfo describes how to start serving

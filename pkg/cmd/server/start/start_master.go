@@ -161,12 +161,12 @@ func (o MasterOptions) RunMaster() error {
 		}
 	}
 
-	var masterConfig *configapi.OpenShiftMasterConfig
+	var masterConfig *configapi.MasterConfig
 	var err error
 	if startUsingConfigFile {
 		masterConfig, err = ReadMasterConfig(o.ConfigFile)
 	} else {
-		masterConfig, err = o.MasterArgs.BuildSerializeableOpenShiftMasterConfig()
+		masterConfig, err = o.MasterArgs.BuildSerializeableMasterConfig()
 	}
 	if err != nil {
 		return err
@@ -237,13 +237,13 @@ func (o MasterOptions) CreateCerts() error {
 	return nil
 }
 
-func ReadMasterConfig(filename string) (*configapi.OpenShiftMasterConfig, error) {
+func ReadMasterConfig(filename string) (*configapi.MasterConfig, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
 
-	config := &configapi.OpenShiftMasterConfig{}
+	config := &configapi.MasterConfig{}
 
 	if err := configapilatest.Codec.DecodeInto(data, config); err != nil {
 		return nil, err
@@ -251,7 +251,7 @@ func ReadMasterConfig(filename string) (*configapi.OpenShiftMasterConfig, error)
 	return config, nil
 }
 
-func StartMaster(openshiftMasterConfig *configapi.OpenShiftMasterConfig) error {
+func StartMaster(openshiftMasterConfig *configapi.MasterConfig) error {
 	glog.Infof("Starting an OpenShift master, reachable at %s (etcd: %s)", openshiftMasterConfig.ServingInfo.BindAddress, openshiftMasterConfig.EtcdClientInfo.URL)
 	glog.Infof("OpenShift master public address is %s", openshiftMasterConfig.AssetConfig.MasterPublicURL)
 

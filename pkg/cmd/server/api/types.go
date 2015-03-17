@@ -35,7 +35,7 @@ type NodeConfig struct {
 	RecordEvents bool
 }
 
-type OpenShiftMasterConfig struct {
+type MasterConfig struct {
 	api.TypeMeta
 
 	// ServingInfo describes how to start serving

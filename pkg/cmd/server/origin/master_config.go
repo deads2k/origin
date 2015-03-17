@@ -43,7 +43,7 @@ const (
 
 // MasterConfig defines the required parameters for starting the OpenShift master
 type MasterConfig struct {
-	Options configapi.OpenShiftMasterConfig
+	Options configapi.MasterConfig
 
 	Authenticator                 authenticator.Request
 	Authorizer                    authorizer.Authorizer
@@ -89,7 +89,7 @@ type MasterConfig struct {
 	OSClient *osclient.Client
 }
 
-func BuildMasterConfig(options configapi.OpenShiftMasterConfig) (*MasterConfig, error) {
+func BuildMasterConfig(options configapi.MasterConfig) (*MasterConfig, error) {
 
 	etcdHelper, err := etcd.NewOpenShiftEtcdHelper(options.EtcdClientInfo.URL)
 	if err != nil {

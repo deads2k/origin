@@ -56,7 +56,7 @@ func getAdminKubeConfigFile(certArgs start.CertArgs) string {
 	return path.Clean(path.Join(certArgs.CertDir, "admin/.kubeconfig"))
 }
 
-func StartTestAllInOne() (*configapi.OpenShiftMasterConfig, string, error) {
+func StartTestAllInOne() (*configapi.MasterConfig, string, error) {
 	deleteAllEtcdKeys()
 
 	masterArgs, nodeArgs, _, _, _, _ := setupStartOptions()
@@ -74,7 +74,7 @@ func StartTestAllInOne() (*configapi.OpenShiftMasterConfig, string, error) {
 
 	adminKubeConfigFile := getAdminKubeConfigFile(*masterArgs.CertArgs)
 
-	openshiftMasterConfig, err := startOptions.MasterArgs.BuildSerializeableOpenShiftMasterConfig()
+	openshiftMasterConfig, err := startOptions.MasterArgs.BuildSerializeableMasterConfig()
 	if err != nil {
 		return nil, "", err
 	}
@@ -115,7 +115,7 @@ func StartTestAllInOne() (*configapi.OpenShiftMasterConfig, string, error) {
 // TODO Unify with StartAllInOne.
 
 // StartTestMaster starts up a test master and returns back the startOptions so you can get clients and certs
-func StartTestMaster() (*configapi.OpenShiftMasterConfig, string, error) {
+func StartTestMaster() (*configapi.MasterConfig, string, error) {
 	deleteAllEtcdKeys()
 
 	masterArgs, _, _, _, _, _ := setupStartOptions()
@@ -135,7 +135,7 @@ func StartTestMaster() (*configapi.OpenShiftMasterConfig, string, error) {
 
 	adminKubeConfigFile := getAdminKubeConfigFile(*masterArgs.CertArgs)
 
-	openshiftMasterConfig, err := startOptions.MasterArgs.BuildSerializeableOpenShiftMasterConfig()
+	openshiftMasterConfig, err := startOptions.MasterArgs.BuildSerializeableMasterConfig()
 	if err != nil {
 		return nil, "", err
 	}

@@ -81,7 +81,7 @@ type AuthConfig struct {
 	GithubClientSecret string
 }
 
-func BuildAuthConfig(options configapi.OpenShiftMasterConfig) (*AuthConfig, error) {
+func BuildAuthConfig(options configapi.MasterConfig) (*AuthConfig, error) {
 	etcdHelper, err := etcd.NewOpenShiftEtcdHelper(options.EtcdClientInfo.URL)
 	if err != nil {
 		return nil, fmt.Errorf("Error setting up server storage: %v", err)

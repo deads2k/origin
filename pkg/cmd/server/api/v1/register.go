@@ -9,12 +9,10 @@ var Codec = runtime.CodecFor(api.Scheme, "v1")
 
 func init() {
 	api.Scheme.AddKnownTypes("v1",
-		&OpenShiftMasterConfig{},
-		&KubernetesMasterConfig{},
+		&MasterConfig{},
 		&NodeConfig{},
 	)
 }
 
-func (*OpenShiftMasterConfig) IsAnAPIObject()  {}
-func (*KubernetesMasterConfig) IsAnAPIObject() {}
-func (*NodeConfig) IsAnAPIObject()             {}
+func (*MasterConfig) IsAnAPIObject() {}
+func (*NodeConfig) IsAnAPIObject()   {}

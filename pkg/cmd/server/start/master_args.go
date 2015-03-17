@@ -79,9 +79,9 @@ func NewDefaultMasterArgs() *MasterArgs {
 	return config
 }
 
-// BuildSerializeableOpenShiftMasterConfig takes the MasterArgs (partially complete config) and uses them along with defaulting behavior to create the fully specified
+// BuildSerializeableMasterConfig takes the MasterArgs (partially complete config) and uses them along with defaulting behavior to create the fully specified
 // config object for starting the master
-func (args MasterArgs) BuildSerializeableOpenShiftMasterConfig() (*configapi.OpenShiftMasterConfig, error) {
+func (args MasterArgs) BuildSerializeableMasterConfig() (*configapi.MasterConfig, error) {
 	masterAddr, err := args.GetMasterAddress()
 	if err != nil {
 		return nil, err
@@ -132,7 +132,7 @@ func (args MasterArgs) BuildSerializeableOpenShiftMasterConfig() (*configapi.Ope
 		}
 	}
 
-	config := &configapi.OpenShiftMasterConfig{
+	config := &configapi.MasterConfig{
 		ServingInfo: configapi.ServingInfo{
 			BindAddress: args.BindAddrArg.BindAddr.URL.Host,
 			ServerCert:  certs.DefaultMasterServingCertInfo(args.CertArgs.CertDir),
@@ -397,7 +397,7 @@ func getPort(theURL url.URL) int {
 }
 
 // WriteMaster serializes the config to yaml.
-func WriteMaster(config *configapi.OpenShiftMasterConfig) ([]byte, error) {
+func WriteMaster(config *configapi.MasterConfig) ([]byte, error) {
 	json, err := latestconfigapi.Codec.Encode(config)
 	if err != nil {
 		return nil, err

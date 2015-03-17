@@ -53,7 +53,7 @@ func UseTLS(servingInfo ServingInfo) bool {
 }
 
 // GetAPIClientCertCAPool returns the cert pool used to validate client certificates to the API server
-func GetAPIClientCertCAPool(options OpenShiftMasterConfig) (*x509.CertPool, error) {
+func GetAPIClientCertCAPool(options MasterConfig) (*x509.CertPool, error) {
 	certs, err := getAPIClientCertCAs(options)
 	if err != nil {
 		return nil, err
@@ -66,7 +66,7 @@ func GetAPIClientCertCAPool(options OpenShiftMasterConfig) (*x509.CertPool, erro
 }
 
 // GetClientCertCAPool returns a cert pool containing all client CAs that could be presented (union of API and OAuth)
-func GetClientCertCAPool(options OpenShiftMasterConfig) (*x509.CertPool, error) {
+func GetClientCertCAPool(options MasterConfig) (*x509.CertPool, error) {
 	roots := x509.NewCertPool()
 
 	// Add CAs for OAuth
@@ -91,7 +91,7 @@ func GetClientCertCAPool(options OpenShiftMasterConfig) (*x509.CertPool, error) 
 }
 
 // GetAPIServerCertCAPool returns the cert pool containing the roots for the API server cert
-func GetAPIServerCertCAPool(options OpenShiftMasterConfig) (*x509.CertPool, error) {
+func GetAPIServerCertCAPool(options MasterConfig) (*x509.CertPool, error) {
 	caRoots, err := crypto.GetTLSCARoots(options.ServingInfo.ClientCA)
 	if err != nil {
 		return nil, err
@@ -103,7 +103,7 @@ func GetAPIServerCertCAPool(options OpenShiftMasterConfig) (*x509.CertPool, erro
 	return roots, nil
 }
 
-func getOAuthClientCertCAs(options OpenShiftMasterConfig) ([]*x509.Certificate, error) {
+func getOAuthClientCertCAs(options MasterConfig) ([]*x509.Certificate, error) {
 	caFile := options.OAuthConfig.ProxyCA
 	if len(caFile) == 0 {
 		return nil, nil
@@ -119,7 +119,7 @@ func getOAuthClientCertCAs(options OpenShiftMasterConfig) ([]*x509.Certificate, 
 	return certs, nil
 }
 
-func getAPIClientCertCAs(options OpenShiftMasterConfig) ([]*x509.Certificate, error) {
+func getAPIClientCertCAs(options MasterConfig) ([]*x509.Certificate, error) {
 	apiClientCertCAs, err := crypto.GetTLSCARoots(options.ServingInfo.ClientCA)
 	if err != nil {
 		return nil, err
