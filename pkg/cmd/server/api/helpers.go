@@ -13,12 +13,10 @@ import (
 )
 
 func GetKubeClient(kubeConfigFile string) (*kclient.Client, *kclient.Config, error) {
-	parsedKubeConfig, err := clientcmd.LoadFromFile(kubeConfigFile)
-	if err != nil {
-		return nil, nil, err
-	}
-	clientConfig := clientcmd.NewDefaultClientConfig(*parsedKubeConfig, &clientcmd.ConfigOverrides{})
-	kubeConfig, err := clientConfig.ClientConfig()
+	loadingRules := &clientcmd.ClientConfigLoadingRules{CommandLinePath: kubeConfigFile}
+	loader := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{})
+
+	kubeConfig, err := loader.ClientConfig()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -31,12 +29,10 @@ func GetKubeClient(kubeConfigFile string) (*kclient.Client, *kclient.Config, err
 }
 
 func GetOpenShiftClient(kubeConfigFile string) (*client.Client, *kclient.Config, error) {
-	parsedKubeConfig, err := clientcmd.LoadFromFile(kubeConfigFile)
-	if err != nil {
-		return nil, nil, err
-	}
-	clientConfig := clientcmd.NewDefaultClientConfig(*parsedKubeConfig, &clientcmd.ConfigOverrides{})
-	kubeConfig, err := clientConfig.ClientConfig()
+	loadingRules := &clientcmd.ClientConfigLoadingRules{CommandLinePath: kubeConfigFile}
+	loader := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{})
+
+	kubeConfig, err := loader.ClientConfig()
 	if err != nil {
 		return nil, nil, err
 	}
