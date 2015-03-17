@@ -4,6 +4,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 
 	kclient "github.com/GoogleCloudPlatform/kubernetes/pkg/client"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/client/clientcmd"
@@ -11,6 +12,82 @@ import (
 	"github.com/openshift/origin/pkg/client"
 	"github.com/openshift/origin/pkg/cmd/server/crypto"
 )
+
+func GetMasterFileReferences(config *MasterConfig) []*string {
+	refs := []*string{}
+
+	refs = append(refs, &config.ServingInfo.ServerCert.CertFile)
+	refs = append(refs, &config.ServingInfo.ServerCert.KeyFile)
+	refs = append(refs, &config.ServingInfo.ClientCA)
+
+	refs = append(refs, &config.EtcdClientInfo.ClientCert.CertFile)
+	refs = append(refs, &config.EtcdClientInfo.ClientCert.KeyFile)
+	refs = append(refs, &config.EtcdClientInfo.CA)
+
+	if config.EtcdConfig != nil {
+		refs = append(refs, &config.EtcdConfig.ServingInfo.ServerCert.CertFile)
+		refs = append(refs, &config.EtcdConfig.ServingInfo.ServerCert.KeyFile)
+		refs = append(refs, &config.EtcdConfig.ServingInfo.ClientCA)
+		refs = append(refs, &config.EtcdConfig.StorageDir)
+	}
+
+	if config.OAuthConfig != nil {
+		refs = append(refs, &config.OAuthConfig.ProxyCA)
+	}
+
+	if config.AssetConfig != nil {
+		refs = append(refs, &config.AssetConfig.ServingInfo.ServerCert.CertFile)
+		refs = append(refs, &config.AssetConfig.ServingInfo.ServerCert.KeyFile)
+		refs = append(refs, &config.AssetConfig.ServingInfo.ClientCA)
+	}
+
+	refs = append(refs, &config.MasterClients.DeployerKubeConfig)
+	refs = append(refs, &config.MasterClients.OpenShiftLoopbackKubeConfig)
+	refs = append(refs, &config.MasterClients.KubernetesKubeConfig)
+
+	return refs
+}
+
+func GetNodeFileReferences(config *NodeConfig) []*string {
+	refs := []*string{}
+
+	refs = append(refs, &config.ServingInfo.ServerCert.CertFile)
+	refs = append(refs, &config.ServingInfo.ServerCert.KeyFile)
+	refs = append(refs, &config.ServingInfo.ClientCA)
+
+	refs = append(refs, &config.MasterKubeConfig)
+
+	refs = append(refs, &config.VolumeDirectory)
+
+	return refs
+}
+
+func ResolvePaths(refs []*string, base string) error {
+	for _, ref := range refs {
+		// Don't resolve empty paths
+		if len(*ref) > 0 {
+			// Don't resolve absolute paths
+			if !filepath.IsAbs(*ref) {
+				*ref = filepath.Join(base, *ref)
+			}
+		}
+	}
+	return nil
+}
+
+func RelativizePaths(refs []*string, base string) error {
+	for _, ref := range refs {
+		// Don't relativize empty paths
+		if len(*ref) > 0 {
+			rel, err := filepath.Rel(base, *ref)
+			if err != nil {
+				return err
+			}
+			*ref = rel
+		}
+	}
+	return nil
+}
 
 func GetKubeClient(kubeConfigFile string) (*kclient.Client, *kclient.Config, error) {
 	loadingRules := &clientcmd.ClientConfigLoadingRules{CommandLinePath: kubeConfigFile}

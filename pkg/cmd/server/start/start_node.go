@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -15,11 +16,13 @@ import (
 	"github.com/spf13/cobra"
 
 	kapi "github.com/GoogleCloudPlatform/kubernetes/pkg/api"
+	kerrors "github.com/GoogleCloudPlatform/kubernetes/pkg/api/errors"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/client/record"
 	"github.com/openshift/origin/pkg/cmd/server/kubernetes"
 
 	configapi "github.com/openshift/origin/pkg/cmd/server/api"
 	configapilatest "github.com/openshift/origin/pkg/cmd/server/api/latest"
+	"github.com/openshift/origin/pkg/cmd/server/api/validation"
 	"github.com/openshift/origin/pkg/cmd/server/certs"
 	cmdutil "github.com/openshift/origin/pkg/cmd/util"
 	"github.com/openshift/origin/pkg/cmd/util/docker"
@@ -147,7 +150,30 @@ func (o NodeOptions) RunNode() error {
 		return err
 	}
 
+	errs := validation.ValidateNodeConfig(nodeConfig)
+	if len(errs) != 0 {
+		return kerrors.NewInvalid("nodeConfig", "", errs)
+	}
+
 	if o.WriteConfigOnly {
+		// Resolve relative to CWD
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		if err := configapi.ResolvePaths(configapi.GetNodeFileReferences(nodeConfig), cwd); err != nil {
+			return err
+		}
+
+		// Relativize to config file dir
+		base, err := cmdutil.MakeAbs(filepath.Dir(o.ConfigFile), cwd)
+		if err != nil {
+			return err
+		}
+		if err := configapi.RelativizePaths(configapi.GetNodeFileReferences(nodeConfig), base); err != nil {
+			return err
+		}
+
 		content, err := WriteNode(nodeConfig)
 		if err != nil {
 			return err
@@ -195,6 +221,20 @@ func (o NodeOptions) CreateCerts() error {
 		SerialFile: certs.DefaultSerialFilename(o.NodeArgs.CertArgs.CertDir, "ca"),
 	}
 
+	serverCertInfo := certs.DefaultNodeServingCertInfo(o.NodeArgs.CertArgs.CertDir, o.NodeArgs.NodeName)
+	nodeServerCertOptions := certs.CreateServerCertOptions{
+		GetSignerCertOptions: getSignerOptions,
+
+		CertFile: serverCertInfo.CertFile,
+		KeyFile:  serverCertInfo.KeyFile,
+
+		Hostnames: []string{o.NodeArgs.NodeName},
+	}
+
+	if _, err := nodeServerCertOptions.CreateServerCert(); err != nil {
+		return err
+	}
+
 	mintNodeClientCert := certs.CreateNodeClientCertOptions{
 		GetSignerCertOptions: getSignerOptions,
 		CertFile:             certs.DefaultCertFilename(o.NodeArgs.CertArgs.CertDir, username),
@@ -239,6 +279,15 @@ func ReadNodeConfig(filename string) (*configapi.NodeConfig, error) {
 	if err := configapilatest.Codec.DecodeInto(data, config); err != nil {
 		return nil, err
 	}
+
+	base, err := cmdutil.MakeAbs(filepath.Dir(filename), "")
+	if err != nil {
+		return nil, err
+	}
+	if err := configapi.ResolvePaths(configapi.GetNodeFileReferences(config), base); err != nil {
+		return nil, err
+	}
+
 	return config, nil
 }
 
