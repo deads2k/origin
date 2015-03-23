@@ -7,6 +7,7 @@ import (
 
 	kclient "github.com/GoogleCloudPlatform/kubernetes/pkg/client"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/client/clientcmd"
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/runtime"
 
 	"github.com/openshift/origin/pkg/client"
 	"github.com/openshift/origin/pkg/cmd/server/crypto"
@@ -202,4 +203,49 @@ func getAPIClientCertCAs(options MasterConfig) ([]*x509.Certificate, error) {
 	}
 
 	return apiClientCertCAs.Roots, nil
+}
+
+func IsPasswordAuthenticator(provider IdentityProvider) bool {
+	return IsPasswordAuthenticatorProviderType(provider.Provider)
+}
+func IsPasswordAuthenticatorProviderType(provider runtime.EmbeddedObject) bool {
+	switch provider.Object.(type) {
+	case
+		(*BasicAuthPasswordIdentityProvider),
+		(*AllowAllPasswordIdentityProvider),
+		(*DenyAllPasswordIdentityProvider),
+		(*HTPasswdPasswordIdentityProvider):
+
+		return true
+	}
+
+	return false
+}
+
+func IsIdentityProviderType(provider runtime.EmbeddedObject) bool {
+	switch provider.Object.(type) {
+	case
+		(*XRemoteUserIdentityProvider),
+		(*OAuthRedirectingIdentityProvider),
+		(*BasicAuthPasswordIdentityProvider),
+		(*AllowAllPasswordIdentityProvider),
+		(*DenyAllPasswordIdentityProvider),
+		(*HTPasswdPasswordIdentityProvider):
+
+		return true
+	}
+
+	return false
+}
+
+func IsOAuthProviderType(provider runtime.EmbeddedObject) bool {
+	switch provider.Object.(type) {
+	case
+		(*GoogleOAuthProvider),
+		(*GitHubOAuthProvider):
+
+		return true
+	}
+
+	return false
 }

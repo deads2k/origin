@@ -2,6 +2,7 @@ package v1
 
 import (
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/conversion"
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/util"
 	newer "github.com/openshift/origin/pkg/cmd/server/api"
 )
 
@@ -33,6 +34,20 @@ func init() {
 			out.CA = in.CA
 			out.CertFile = in.ClientCert.CertFile
 			out.KeyFile = in.ClientCert.KeyFile
+			return nil
+		},
+		func(in *XRemoteUserIdentityProvider, out *newer.XRemoteUserIdentityProvider, s conversion.Scope) error {
+			if err := s.DefaultConvert(in, out, conversion.IgnoreMissingFields); err != nil {
+				return err
+			}
+			out.Headers = util.NewStringSet(in.HeadersSlice...)
+			return nil
+		},
+		func(in *newer.XRemoteUserIdentityProvider, out *XRemoteUserIdentityProvider, s conversion.Scope) error {
+			if err := s.DefaultConvert(in, out, conversion.IgnoreMissingFields); err != nil {
+				return err
+			}
+			out.HeadersSlice = in.Headers.List()
 			return nil
 		},
 	)

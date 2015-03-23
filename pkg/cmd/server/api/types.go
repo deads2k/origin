@@ -2,6 +2,8 @@ package api
 
 import (
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/api"
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/runtime"
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/util"
 )
 
 // NodeConfig is the fully specified config starting an OpenShift node
@@ -146,8 +148,119 @@ type OAuthConfig struct {
 	// AssetPublicURL is used for building valid client redirect URLs for external access
 	AssetPublicURL string
 
-	// all the handlers here
+	//IdentityProviders is an ordered list of ways for a user to identify themselves
+	IdentityProviders []IdentityProvider
+
+	// GrantConfig describes how to handle grants
+	GrantConfig GrantConfig
+
+	// SessionAuthenticationConfig hold information about configuring sessions.
+	SessionAuthenticationConfig *SessionAuthenticationConfig
+
+	TokenConfig TokenConfig
 }
+
+type TokenConfig struct {
+	// Max age of authorize tokens
+	AuthorizeTokenMaxAgeSeconds int32
+	// Max age of access tokens
+	AccessTokenMaxAgeSeconds int32
+}
+
+type SessionAuthenticationConfig struct {
+	// SessionSecrets list the secret(s) to use to encrypt created sessions. Used by AuthRequestHandlerSession
+	SessionSecrets []string
+	// SessionMaxAgeSeconds specifies how long created sessions last. Used by AuthRequestHandlerSession
+	SessionMaxAgeSeconds int32
+	// SessionName is the cookie name used to store the session
+	SessionName string
+}
+
+type IdentityProviderUsage struct {
+	// ProviderScope is used to qualify the identities teturned by this provider
+	ProviderScope string
+
+	// UseAsChallenger indicates whether to issue challenges for this provider
+	UseAsChallenger bool
+	// UseAsLogin indicates whether to use this identity provider to back the login screen
+	UseAsLogin bool
+}
+
+type IdentityProvider struct {
+	// Usage contains metadata about how to use this provider
+	Usage IdentityProviderUsage
+
+	// Provider contains the information about how to set up a specific identity provider
+	Provider runtime.EmbeddedObject
+}
+
+type BasicAuthPasswordIdentityProvider struct {
+	api.TypeMeta
+
+	// RemoteConnectionInfo contains information about how to connect to the external basic auth server
+	RemoteConnectionInfo RemoteConnectionInfo
+}
+
+type AllowAllPasswordIdentityProvider struct {
+	api.TypeMeta
+}
+
+type DenyAllPasswordIdentityProvider struct {
+	api.TypeMeta
+}
+
+type HTPasswdPasswordIdentityProvider struct {
+	api.TypeMeta
+
+	// File is a reference to your htpasswd file
+	File string
+}
+
+type XRemoteUserIdentityProvider struct {
+	api.TypeMeta
+
+	// CAFile is a file with the trusted signer certs
+	CAFile string
+	// Headers is the set of headers to check for identity information
+	Headers util.StringSet
+}
+
+type OAuthRedirectingIdentityProvider struct {
+	api.TypeMeta
+
+	// ClientID is the oauth client ID
+	ClientID string
+	// ClientSecret is the oauth client secret
+	ClientSecret string
+
+	// Provider contains the information about exactly which kind of oauth you're identifying with
+	Provider runtime.EmbeddedObject
+}
+
+type GoogleOAuthProvider struct {
+	api.TypeMeta
+}
+type GitHubOAuthProvider struct {
+	api.TypeMeta
+}
+
+type GrantConfig struct {
+	// Method: allow, deny, prompt
+	Method GrantHandlerType
+}
+
+type GrantHandlerType string
+
+const (
+	// GrantHandlerAuto auto-approves client authorization grant requests
+	GrantHandlerAuto GrantHandlerType = "auto"
+	// GrantHandlerPrompt prompts the user to approve new client authorization grant requests
+	GrantHandlerPrompt GrantHandlerType = "prompt"
+	// GrantHandlerDeny auto-denies client authorization grant requests
+	GrantHandlerDeny GrantHandlerType = "deny"
+)
+
+var ValidGrantHandlerTypes = util.NewStringSet(string(GrantHandlerAuto), string(GrantHandlerPrompt), string(GrantHandlerDeny))
 
 type EtcdConfig struct {
 	ServingInfo ServingInfo
