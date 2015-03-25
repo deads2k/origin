@@ -346,8 +346,6 @@ func (c *AuthConfig) getAuthenticationHandler(mux cmdutil.Mux, errorHandler hand
 			login := login.NewLogin(getCSRF(), &callbackPasswordAuthenticator{passwordAuth, successHandler}, login.DefaultLoginFormRenderer)
 			login.Install(mux, OpenShiftLoginPrefix)
 
-		default:
-			return nil, fmt.Errorf("No AuthenticationHandler found that matches %#v.  The oauth server cannot start!", identityProvider)
 		}
 	}
 

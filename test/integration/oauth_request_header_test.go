@@ -10,8 +10,11 @@ import (
 	"testing"
 
 	kclient "github.com/GoogleCloudPlatform/kubernetes/pkg/client"
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/runtime"
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/util"
 
 	"github.com/openshift/origin/pkg/client"
+	configapi "github.com/openshift/origin/pkg/cmd/server/api"
 	testutil "github.com/openshift/origin/test/util"
 )
 
@@ -97,15 +100,28 @@ func TestOAuthRequestHeader(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// This is all that should be needed to enable auth-proxy-based auth, with cert verification
-	// If these change, need to update documentation at http://docs.openshift.org/latest/architecture/authentication.html
-	os.Setenv("OPENSHIFT_OAUTH_REQUEST_HANDLERS", "requestheader")
-	os.Setenv("OPENSHIFT_OAUTH_REQUEST_HEADERS", "My-Remote-User,SSO-User")
-	os.Setenv("OPENSHIFT_OAUTH_HANDLER", "deny")
-	os.Setenv("OPENSHIFT_OAUTH_REQUEST_HEADER_CA_FILE", caFile.Name())
+	masterOptions, err := testutil.DefaultMasterOptions()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	masterOptions.OAuthConfig.IdentityProviders[0] = configapi.IdentityProvider{
+		Usage: configapi.IdentityProviderUsage{
+			ProviderScope:   "requestheader",
+			UseAsChallenger: false,
+			UseAsLogin:      false,
+		},
+		Provider: runtime.EmbeddedObject{
+			&configapi.XRemoteUserIdentityProvider{
+				CAFile:  caFile.Name(),
+				Headers: util.NewStringSet("My-Remote-User", "SSO-User"),
+			},
+		},
+	}
+	masterOptions.OAuthConfig.ProxyCA = caFile.Name()
 
 	// Start server
-	_, clusterAdminKubeConfig, err := testutil.StartTestAllInOne()
+	clusterAdminKubeConfig, err := testutil.StartConfiguredMaster(masterOptions)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
