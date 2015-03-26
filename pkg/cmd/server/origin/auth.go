@@ -3,6 +3,7 @@ package origin
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -311,13 +312,12 @@ func (c *AuthConfig) getAuthenticationHandler(mux cmdutil.Mux, errorHandler hand
 
 			if identityProvider.Usage.UseAsLogin {
 				redirectors["login"] = &redirector{RedirectURL: OpenShiftLoginPrefix, ThenParam: "then"}
+				login := login.NewLogin(getCSRF(), &callbackPasswordAuthenticator{passwordAuth, successHandler}, login.DefaultLoginFormRenderer)
+				login.Install(mux, OpenShiftLoginPrefix)
 			}
 			if identityProvider.Usage.UseAsChallenger {
 				challengers["login"] = passwordchallenger.NewBasicAuthChallenger("openshift")
 			}
-
-			login := login.NewLogin(getCSRF(), &callbackPasswordAuthenticator{passwordAuth, successHandler}, login.DefaultLoginFormRenderer)
-			login.Install(mux, OpenShiftLoginPrefix)
 
 		} else {
 			switch provider := identityProvider.Provider.Object.(type) {
@@ -342,7 +342,12 @@ func (c *AuthConfig) getAuthenticationHandler(mux cmdutil.Mux, errorHandler hand
 				}
 
 				mux.Handle(callbackPath, oauthHandler)
-				redirectors[identityProvider.Usage.ProviderName] = oauthHandler
+				if identityProvider.Usage.UseAsLogin {
+					redirectors[identityProvider.Usage.ProviderName] = oauthHandler
+				}
+				if identityProvider.Usage.UseAsChallenger {
+					return nil, errors.New("oauth identity providers cannot issue challenges")
+				}
 
 			}
 		}
@@ -396,14 +401,20 @@ func (c *AuthConfig) getAuthenticationSuccessHandler() handlers.AuthenticationSu
 		successHandlers = append(successHandlers, c.getSessionAuth())
 	}
 
+	addedRedirectSuccessHandler := false
 	for _, identityProvider := range c.Options.IdentityProviders {
+		if !identityProvider.Usage.UseAsLogin {
+			continue
+		}
+
 		switch identityProvider.Provider.Object.(type) {
 		case (*configapi.OAuthRedirectingIdentityProvider):
 			successHandlers = append(successHandlers, external.DefaultState().(handlers.AuthenticationSuccessHandler))
 		}
 
-		if identityProvider.Usage.UseAsLogin {
+		if !addedRedirectSuccessHandler && configapi.IsPasswordAuthenticator(identityProvider) {
 			successHandlers = append(successHandlers, redirectSuccessHandler{})
+			addedRedirectSuccessHandler = true
 		}
 	}
 

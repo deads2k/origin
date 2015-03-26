@@ -95,8 +95,23 @@ func ValidateOAuthConfig(config *api.OAuthConfig) errs.ValidationErrorList {
 
 	allErrs = append(allErrs, ValidateGrantConfig(config.GrantConfig).Prefix("grantConfig")...)
 
+	redirectingIdentityProviders := []int{}
 	for i, identityProvider := range config.IdentityProviders {
+		if identityProvider.Usage.UseAsLogin {
+			redirectingIdentityProviders = append(redirectingIdentityProviders, i)
+
+			if api.IsPasswordAuthenticator(identityProvider) {
+				if config.SessionConfig == nil {
+					allErrs = append(allErrs, errs.NewFieldInvalid("sessionConfig", config, "sessionConfig is required if a password identity provider is used for browser based login"))
+				}
+			}
+		}
+
 		allErrs = append(allErrs, ValidateIdentityProvider(identityProvider).Prefix(fmt.Sprintf("identityProvider[%d]", i))...)
+	}
+
+	if len(redirectingIdentityProviders) > 1 {
+		allErrs = append(allErrs, errs.NewFieldInvalid("identityProviders", config.IdentityProviders, fmt.Sprintf("only one identity provider can support login for a browser, found: %v", redirectingIdentityProviders)))
 	}
 
 	return allErrs
@@ -120,6 +135,12 @@ func ValidateIdentityProvider(identityProvider api.IdentityProvider) errs.Valida
 			if len(provider.Headers) == 0 {
 				allErrs = append(allErrs, errs.NewFieldRequired("provider.headers"))
 			}
+			if identityProvider.Usage.UseAsChallenger {
+				allErrs = append(allErrs, errs.NewFieldInvalid("provider.useAsChallenger", identityProvider.Usage.UseAsChallenger, "request header providers cannot be used for challenges"))
+			}
+			if identityProvider.Usage.UseAsChallenger {
+				allErrs = append(allErrs, errs.NewFieldInvalid("provider.useAsLogin", identityProvider.Usage.UseAsChallenger, "request header providers cannot be used for browser login"))
+			}
 
 		case (*api.BasicAuthPasswordIdentityProvider):
 			allErrs = append(allErrs, ValidateRemoteConnectionInfo(provider.RemoteConnectionInfo).Prefix("provider")...)
@@ -136,6 +157,9 @@ func ValidateIdentityProvider(identityProvider api.IdentityProvider) errs.Valida
 			}
 			if !api.IsOAuthProviderType(provider.Provider) {
 				allErrs = append(allErrs, errs.NewFieldInvalid("provider.provider", provider.Provider, fmt.Sprintf("%v is invalid in this context", identityProvider.Provider)))
+			}
+			if identityProvider.Usage.UseAsChallenger {
+				allErrs = append(allErrs, errs.NewFieldInvalid("provider.useAsChallenger", identityProvider.Usage.UseAsChallenger, "oauth providers cannot be used for challenges"))
 			}
 		}
 

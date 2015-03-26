@@ -180,9 +180,9 @@ type IdentityProviderUsage struct {
 	// ProviderName is used to qualify the identities returned by this provider
 	ProviderName string
 
-	// UseAsChallenger indicates whether to issue challenges for this provider
+	// UseAsChallenger indicates whether to issue WWW-Authenticate challenges for this provider
 	UseAsChallenger bool
-	// UseAsLogin indicates whether to use this identity provider to back the login screen
+	// UseAsLogin indicates whether to use this identity provider for unauthenticated browsers to login against
 	UseAsLogin bool
 }
 
