@@ -42,6 +42,24 @@ func GetMasterFileReferences(config *MasterConfig) []*string {
 
 	if config.OAuthConfig != nil {
 		refs = append(refs, &config.OAuthConfig.ProxyCA)
+
+		for i, _ := range config.OAuthConfig.IdentityProviders {
+			identityProvider := config.OAuthConfig.IdentityProviders[i]
+
+			switch provider := identityProvider.Provider.Object.(type) {
+			case (*RequestHeaderIdentityProvider):
+				refs = append(refs, &provider.ClientCA)
+
+			case (*HTPasswdPasswordIdentityProvider):
+				refs = append(refs, &provider.File)
+
+			case (*BasicAuthPasswordIdentityProvider):
+				refs = append(refs, &provider.RemoteConnectionInfo.CA)
+				refs = append(refs, &provider.RemoteConnectionInfo.ClientCert.CertFile)
+				refs = append(refs, &provider.RemoteConnectionInfo.ClientCert.KeyFile)
+
+			}
+		}
 	}
 
 	if config.AssetConfig != nil {
