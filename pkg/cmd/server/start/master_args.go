@@ -221,7 +221,6 @@ func (args MasterArgs) BuildSerializeableOAuthConfig() (*configapi.OAuthConfig, 
 	}
 
 	config := &configapi.OAuthConfig{
-		ProxyCA:         "",
 		MasterURL:       masterAddr.String(),
 		MasterPublicURL: masterPublicAddr.String(),
 		AssetPublicURL:  assetPublicAddr.String(),

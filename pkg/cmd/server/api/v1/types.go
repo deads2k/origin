@@ -136,9 +136,6 @@ type AssetConfig struct {
 }
 
 type OAuthConfig struct {
-	// ProxyCA is the certificate bundle for confirming the identity of front proxy forwards to the oauth server
-	ProxyCA string `json:"proxyCA"`
-
 	// MasterURL is used for building valid client redirect URLs for external access
 	MasterURL string `json:"masterURL"`
 

@@ -118,7 +118,6 @@ func TestOAuthRequestHeader(t *testing.T) {
 			},
 		},
 	}
-	masterOptions.OAuthConfig.ProxyCA = caFile.Name()
 
 	// Start server
 	clusterAdminKubeConfig, err := testutil.StartConfiguredMaster(masterOptions)

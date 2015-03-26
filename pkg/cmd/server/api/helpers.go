@@ -41,8 +41,6 @@ func GetMasterFileReferences(config *MasterConfig) []*string {
 	}
 
 	if config.OAuthConfig != nil {
-		refs = append(refs, &config.OAuthConfig.ProxyCA)
-
 		for i, _ := range config.OAuthConfig.IdentityProviders {
 			identityProvider := config.OAuthConfig.IdentityProviders[i]
 
@@ -195,19 +193,32 @@ func getOAuthClientCertCAs(options MasterConfig) ([]*x509.Certificate, error) {
 		return nil, nil
 	}
 
-	caFile := options.OAuthConfig.ProxyCA
-	if len(caFile) == 0 {
-		return nil, nil
+	allCerts := []*x509.Certificate{}
+
+	if options.OAuthConfig != nil {
+		for i, _ := range options.OAuthConfig.IdentityProviders {
+			identityProvider := options.OAuthConfig.IdentityProviders[i]
+
+			switch provider := identityProvider.Provider.Object.(type) {
+			case (*RequestHeaderIdentityProvider):
+				caFile := provider.ClientCA
+				if len(caFile) == 0 {
+					return nil, nil
+				}
+				caPEMBlock, err := ioutil.ReadFile(caFile)
+				if err != nil {
+					return nil, err
+				}
+				certs, err := crypto.CertsFromPEM(caPEMBlock)
+				if err != nil {
+					return nil, fmt.Errorf("Error reading %s: %s", caFile, err)
+				}
+				allCerts = append(allCerts, certs...)
+			}
+		}
 	}
-	caPEMBlock, err := ioutil.ReadFile(caFile)
-	if err != nil {
-		return nil, err
-	}
-	certs, err := crypto.CertsFromPEM(caPEMBlock)
-	if err != nil {
-		return nil, fmt.Errorf("Error reading %s: %s", caFile, err)
-	}
-	return certs, nil
+
+	return allCerts, nil
 }
 
 func getAPIClientCertCAs(options MasterConfig) ([]*x509.Certificate, error) {

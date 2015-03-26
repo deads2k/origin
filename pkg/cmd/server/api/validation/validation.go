@@ -73,10 +73,6 @@ func ValidateKubernetesMasterConfig(config *api.KubernetesMasterConfig) errs.Val
 func ValidateOAuthConfig(config *api.OAuthConfig) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
 
-	if len(config.ProxyCA) > 0 {
-		allErrs = append(allErrs, ValidateFile(config.ProxyCA, "proxyCA")...)
-	}
-
 	if len(config.MasterURL) == 0 {
 		allErrs = append(allErrs, errs.NewFieldRequired("masterURL"))
 	}
