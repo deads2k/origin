@@ -303,34 +303,7 @@ func (c *AuthConfig) getAuthenticationHandler(mux cmdutil.Mux, errorHandler hand
 		userRegistry := useretcd.New(c.EtcdHelper, user.NewDefaultUserInitStrategy())
 		identityMapper := identitymapper.NewAlwaysCreateUserIdentityToUserMapper(identityProvider.Usage.ProviderName, userRegistry)
 
-		switch provider := identityProvider.Provider.Object.(type) {
-		case (*configapi.OAuthRedirectingIdentityProvider):
-			callbackPath := ""
-			var oauthProvider external.Provider
-			switch provider.Provider.Object.(type) {
-			case (*configapi.GoogleOAuthProvider):
-				callbackPath = path.Join(OpenShiftOAuthCallbackPrefix, "google")
-				oauthProvider = google.NewProvider(provider.ClientID, provider.ClientSecret)
-			case (*configapi.GitHubOAuthProvider):
-				callbackPath = path.Join(OpenShiftOAuthCallbackPrefix, "github")
-				oauthProvider = github.NewProvider(provider.ClientID, provider.ClientSecret)
-			default:
-				return nil, fmt.Errorf("unexpected oauth provider %#v", provider)
-			}
-
-			state := external.DefaultState()
-			oauthHandler, err := external.NewExternalOAuthRedirector(oauthProvider, state, c.Options.MasterPublicURL+callbackPath, successHandler, errorHandler, identityMapper)
-			if err != nil {
-				return nil, fmt.Errorf("unexpected error: %v", err)
-			}
-
-			mux.Handle(callbackPath, oauthHandler)
-			redirectors[identityProvider.Usage.ProviderName] = oauthHandler
-
-		case (*configapi.BasicAuthPasswordIdentityProvider),
-			(*configapi.AllowAllPasswordIdentityProvider),
-			(*configapi.DenyAllPasswordIdentityProvider),
-			(*configapi.HTPasswdPasswordIdentityProvider):
+		if configapi.IsPasswordAuthenticator(identityProvider) {
 			passwordAuth, err := c.getPasswordAuthenticator(identityProvider)
 			if err != nil {
 				return nil, err
@@ -346,6 +319,32 @@ func (c *AuthConfig) getAuthenticationHandler(mux cmdutil.Mux, errorHandler hand
 			login := login.NewLogin(getCSRF(), &callbackPasswordAuthenticator{passwordAuth, successHandler}, login.DefaultLoginFormRenderer)
 			login.Install(mux, OpenShiftLoginPrefix)
 
+		} else {
+			switch provider := identityProvider.Provider.Object.(type) {
+			case (*configapi.OAuthRedirectingIdentityProvider):
+				callbackPath := ""
+				var oauthProvider external.Provider
+				switch provider.Provider.Object.(type) {
+				case (*configapi.GoogleOAuthProvider):
+					callbackPath = path.Join(OpenShiftOAuthCallbackPrefix, "google")
+					oauthProvider = google.NewProvider(provider.ClientID, provider.ClientSecret)
+				case (*configapi.GitHubOAuthProvider):
+					callbackPath = path.Join(OpenShiftOAuthCallbackPrefix, "github")
+					oauthProvider = github.NewProvider(provider.ClientID, provider.ClientSecret)
+				default:
+					return nil, fmt.Errorf("unexpected oauth provider %#v", provider)
+				}
+
+				state := external.DefaultState()
+				oauthHandler, err := external.NewExternalOAuthRedirector(oauthProvider, state, c.Options.MasterPublicURL+callbackPath, successHandler, errorHandler, identityMapper)
+				if err != nil {
+					return nil, fmt.Errorf("unexpected error: %v", err)
+				}
+
+				mux.Handle(callbackPath, oauthHandler)
+				redirectors[identityProvider.Usage.ProviderName] = oauthHandler
+
+			}
 		}
 	}
 
@@ -422,42 +421,41 @@ func (c *AuthConfig) getAuthenticationRequestHandler() (authenticator.Request, e
 		userRegistry := useretcd.New(c.EtcdHelper, user.NewDefaultUserInitStrategy())
 		identityMapper := identitymapper.NewAlwaysCreateUserIdentityToUserMapper(identityProvider.Usage.ProviderName, userRegistry)
 
-		switch provider := identityProvider.Provider.Object.(type) {
-		case (*configapi.RequestHeaderIdentityProvider):
-			var authRequestHandler authenticator.Request
-
-			authRequestConfig := &headerrequest.Config{
-				UserNameHeaders: provider.Headers.List(),
-			}
-			authRequestHandler = headerrequest.NewAuthenticator(authRequestConfig, identityMapper)
-
-			// Wrap with an x509 verifier
-			if len(provider.ClientCA) > 0 {
-				caData, err := ioutil.ReadFile(provider.ClientCA)
-				if err != nil {
-					return nil, fmt.Errorf("Error reading %s: %v", provider.ClientCA, err)
-				}
-				opts := x509request.DefaultVerifyOptions()
-				opts.Roots = x509.NewCertPool()
-				if ok := opts.Roots.AppendCertsFromPEM(caData); !ok {
-					return nil, fmt.Errorf("Error loading certs from %s: %v", provider.ClientCA, err)
-				}
-
-				authRequestHandler = x509request.NewVerifier(opts, authRequestHandler)
-			}
-			authRequestHandlers = append(authRequestHandlers, authRequestHandler)
-
-		case (*configapi.BasicAuthPasswordIdentityProvider),
-			(*configapi.AllowAllPasswordIdentityProvider),
-			(*configapi.DenyAllPasswordIdentityProvider),
-			(*configapi.HTPasswdPasswordIdentityProvider):
+		if configapi.IsPasswordAuthenticator(identityProvider) {
 			passwordAuthenticator, err := c.getPasswordAuthenticator(identityProvider)
 			if err != nil {
 				return nil, err
 			}
 			authRequestHandlers = append(authRequestHandlers, basicauthrequest.NewBasicAuthAuthentication(passwordAuthenticator, true))
-		}
 
+		} else {
+			switch provider := identityProvider.Provider.Object.(type) {
+			case (*configapi.RequestHeaderIdentityProvider):
+				var authRequestHandler authenticator.Request
+
+				authRequestConfig := &headerrequest.Config{
+					UserNameHeaders: provider.Headers.List(),
+				}
+				authRequestHandler = headerrequest.NewAuthenticator(authRequestConfig, identityMapper)
+
+				// Wrap with an x509 verifier
+				if len(provider.ClientCA) > 0 {
+					caData, err := ioutil.ReadFile(provider.ClientCA)
+					if err != nil {
+						return nil, fmt.Errorf("Error reading %s: %v", provider.ClientCA, err)
+					}
+					opts := x509request.DefaultVerifyOptions()
+					opts.Roots = x509.NewCertPool()
+					if ok := opts.Roots.AppendCertsFromPEM(caData); !ok {
+						return nil, fmt.Errorf("Error loading certs from %s: %v", provider.ClientCA, err)
+					}
+
+					authRequestHandler = x509request.NewVerifier(opts, authRequestHandler)
+				}
+				authRequestHandlers = append(authRequestHandlers, authRequestHandler)
+
+			}
+		}
 	}
 
 	authRequestHandler := unionrequest.NewUnionAuthentication(authRequestHandlers...)
