@@ -36,14 +36,14 @@ func init() {
 			out.KeyFile = in.ClientCert.KeyFile
 			return nil
 		},
-		func(in *XRemoteUserIdentityProvider, out *newer.XRemoteUserIdentityProvider, s conversion.Scope) error {
+		func(in *RequestHeaderIdentityProvider, out *newer.RequestHeaderIdentityProvider, s conversion.Scope) error {
 			if err := s.DefaultConvert(in, out, conversion.IgnoreMissingFields); err != nil {
 				return err
 			}
 			out.Headers = util.NewStringSet(in.HeadersSlice...)
 			return nil
 		},
-		func(in *newer.XRemoteUserIdentityProvider, out *XRemoteUserIdentityProvider, s conversion.Scope) error {
+		func(in *newer.RequestHeaderIdentityProvider, out *RequestHeaderIdentityProvider, s conversion.Scope) error {
 			if err := s.DefaultConvert(in, out, conversion.IgnoreMissingFields); err != nil {
 				return err
 			}

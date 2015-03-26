@@ -30,7 +30,7 @@ func TestHTPasswd(t *testing.T) {
 
 	masterOptions.OAuthConfig.IdentityProviders[0] = configapi.IdentityProvider{
 		Usage: configapi.IdentityProviderUsage{
-			ProviderScope:   "htpasswd",
+			ProviderName:    "htpasswd",
 			UseAsChallenger: true,
 			UseAsLogin:      true,
 		},

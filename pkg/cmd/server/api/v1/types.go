@@ -152,7 +152,7 @@ type OAuthConfig struct {
 
 	GrantConfig GrantConfig `json:"grantConfig"`
 
-	SessionAuthenticationConfig *SessionAuthenticationConfig `json:"sessionAuthenticationConfig"`
+	SessionConfig *SessionConfig `json:"sessionConfig"`
 
 	TokenConfig TokenConfig `json:"tokenConfig"`
 }
@@ -164,7 +164,7 @@ type TokenConfig struct {
 	AccessTokenMaxAgeSeconds int32 `json:"accessTokenMaxAgeSeconds"`
 }
 
-type SessionAuthenticationConfig struct {
+type SessionConfig struct {
 	// SessionSecrets list the secret(s) to use to encrypt created sessions. Used by AuthRequestHandlerSession
 	SessionSecrets []string `json:"sessionSecrets"`
 	// SessionMaxAgeSeconds specifies how long created sessions last. Used by AuthRequestHandlerSession
@@ -174,7 +174,7 @@ type SessionAuthenticationConfig struct {
 }
 
 type IdentityProviderUsage struct {
-	ProviderScope string `json:"providerScope"`
+	ProviderName string `json:"providerName"`
 
 	UseAsChallenger bool `json:"challenge"`
 	UseAsLogin      bool `json:"login"`
@@ -206,10 +206,10 @@ type HTPasswdPasswordIdentityProvider struct {
 	File string `json:"file"`
 }
 
-type XRemoteUserIdentityProvider struct {
+type RequestHeaderIdentityProvider struct {
 	v1beta3.TypeMeta `json:",inline"`
 
-	CAFile       string   `json:"caFile"`
+	ClientCA     string   `json:"clientCA"`
 	HeadersSlice []string `json:"headers"`
 }
 

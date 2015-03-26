@@ -225,7 +225,7 @@ func IsPasswordAuthenticatorProviderType(provider runtime.EmbeddedObject) bool {
 func IsIdentityProviderType(provider runtime.EmbeddedObject) bool {
 	switch provider.Object.(type) {
 	case
-		(*XRemoteUserIdentityProvider),
+		(*RequestHeaderIdentityProvider),
 		(*OAuthRedirectingIdentityProvider),
 		(*BasicAuthPasswordIdentityProvider),
 		(*AllowAllPasswordIdentityProvider),

@@ -107,14 +107,14 @@ func TestOAuthRequestHeader(t *testing.T) {
 
 	masterOptions.OAuthConfig.IdentityProviders[0] = configapi.IdentityProvider{
 		Usage: configapi.IdentityProviderUsage{
-			ProviderScope:   "requestheader",
+			ProviderName:    "requestheader",
 			UseAsChallenger: false,
 			UseAsLogin:      false,
 		},
 		Provider: runtime.EmbeddedObject{
-			&configapi.XRemoteUserIdentityProvider{
-				CAFile:  caFile.Name(),
-				Headers: util.NewStringSet("My-Remote-User", "SSO-User"),
+			&configapi.RequestHeaderIdentityProvider{
+				ClientCA: caFile.Name(),
+				Headers:  util.NewStringSet("My-Remote-User", "SSO-User"),
 			},
 		},
 	}

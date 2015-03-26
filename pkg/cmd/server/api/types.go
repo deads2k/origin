@@ -154,8 +154,8 @@ type OAuthConfig struct {
 	// GrantConfig describes how to handle grants
 	GrantConfig GrantConfig
 
-	// SessionAuthenticationConfig hold information about configuring sessions.
-	SessionAuthenticationConfig *SessionAuthenticationConfig
+	// SessionConfig hold information about configuring sessions.
+	SessionConfig *SessionConfig
 
 	TokenConfig TokenConfig
 }
@@ -167,7 +167,7 @@ type TokenConfig struct {
 	AccessTokenMaxAgeSeconds int32
 }
 
-type SessionAuthenticationConfig struct {
+type SessionConfig struct {
 	// SessionSecrets list the secret(s) to use to encrypt created sessions. Used by AuthRequestHandlerSession
 	SessionSecrets []string
 	// SessionMaxAgeSeconds specifies how long created sessions last. Used by AuthRequestHandlerSession
@@ -177,8 +177,8 @@ type SessionAuthenticationConfig struct {
 }
 
 type IdentityProviderUsage struct {
-	// ProviderScope is used to qualify the identities teturned by this provider
-	ProviderScope string
+	// ProviderName is used to qualify the identities returned by this provider
+	ProviderName string
 
 	// UseAsChallenger indicates whether to issue challenges for this provider
 	UseAsChallenger bool
@@ -216,11 +216,11 @@ type HTPasswdPasswordIdentityProvider struct {
 	File string
 }
 
-type XRemoteUserIdentityProvider struct {
+type RequestHeaderIdentityProvider struct {
 	api.TypeMeta
 
-	// CAFile is a file with the trusted signer certs
-	CAFile string
+	// ClientCA is a file with the trusted signer certs
+	ClientCA string
 	// Headers is the set of headers to check for identity information
 	Headers util.StringSet
 }

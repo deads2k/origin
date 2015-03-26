@@ -89,8 +89,8 @@ func ValidateOAuthConfig(config *api.OAuthConfig) errs.ValidationErrorList {
 		allErrs = append(allErrs, errs.NewFieldRequired("assetPublicURL"))
 	}
 
-	if config.SessionAuthenticationConfig != nil {
-		allErrs = append(allErrs, ValidateSessionAuthenticationConfig(config.SessionAuthenticationConfig).Prefix("sessionAuthenticationConfig")...)
+	if config.SessionConfig != nil {
+		allErrs = append(allErrs, ValidateSessionConfig(config.SessionConfig).Prefix("sessionConfig")...)
 	}
 
 	allErrs = append(allErrs, ValidateGrantConfig(config.GrantConfig).Prefix("grantConfig")...)
@@ -105,17 +105,17 @@ func ValidateOAuthConfig(config *api.OAuthConfig) errs.ValidationErrorList {
 func ValidateIdentityProvider(identityProvider api.IdentityProvider) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
 
-	if len(identityProvider.Usage.ProviderScope) == 0 {
-		allErrs = append(allErrs, errs.NewFieldRequired("usage.providerScope"))
+	if len(identityProvider.Usage.ProviderName) == 0 {
+		allErrs = append(allErrs, errs.NewFieldRequired("usage.providerName"))
 	}
 
 	if !api.IsIdentityProviderType(identityProvider.Provider) {
 		allErrs = append(allErrs, errs.NewFieldInvalid("provider", identityProvider.Provider, fmt.Sprintf("%v is invalid in this context", identityProvider.Provider)))
 	} else {
 		switch provider := identityProvider.Provider.Object.(type) {
-		case (*api.XRemoteUserIdentityProvider):
-			if len(provider.CAFile) > 0 {
-				allErrs = append(allErrs, ValidateFile(provider.CAFile, "provider.caFile")...)
+		case (*api.RequestHeaderIdentityProvider):
+			if len(provider.ClientCA) > 0 {
+				allErrs = append(allErrs, ValidateFile(provider.ClientCA, "provider.clientCA")...)
 			}
 			if len(provider.Headers) == 0 {
 				allErrs = append(allErrs, errs.NewFieldRequired("provider.headers"))
@@ -192,7 +192,7 @@ func ValidateGrantConfig(config api.GrantConfig) errs.ValidationErrorList {
 	return allErrs
 }
 
-func ValidateSessionAuthenticationConfig(config *api.SessionAuthenticationConfig) errs.ValidationErrorList {
+func ValidateSessionConfig(config *api.SessionConfig) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
 
 	if len(config.SessionSecrets) == 0 {

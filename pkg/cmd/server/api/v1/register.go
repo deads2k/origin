@@ -18,7 +18,7 @@ func init() {
 		&AllowAllPasswordIdentityProvider{},
 		&DenyAllPasswordIdentityProvider{},
 		&HTPasswdPasswordIdentityProvider{},
-		&XRemoteUserIdentityProvider{},
+		&RequestHeaderIdentityProvider{},
 		&OAuthRedirectingIdentityProvider{},
 		&GrantConfig{},
 		&GoogleOAuthProvider{},
@@ -32,7 +32,7 @@ func (*BasicAuthPasswordIdentityProvider) IsAnAPIObject() {}
 func (*AllowAllPasswordIdentityProvider) IsAnAPIObject()  {}
 func (*DenyAllPasswordIdentityProvider) IsAnAPIObject()   {}
 func (*HTPasswdPasswordIdentityProvider) IsAnAPIObject()  {}
-func (*XRemoteUserIdentityProvider) IsAnAPIObject()       {}
+func (*RequestHeaderIdentityProvider) IsAnAPIObject()     {}
 func (*OAuthRedirectingIdentityProvider) IsAnAPIObject()  {}
 func (*GrantConfig) IsAnAPIObject()                       {}
 func (*GoogleOAuthProvider) IsAnAPIObject()               {}

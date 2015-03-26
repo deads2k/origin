@@ -231,7 +231,7 @@ func (args MasterArgs) BuildSerializeableOAuthConfig() (*configapi.OAuthConfig, 
 			Method: "auto",
 		},
 
-		SessionAuthenticationConfig: &configapi.SessionAuthenticationConfig{
+		SessionConfig: &configapi.SessionConfig{
 			SessionSecrets:       []string{uuid.NewUUID().String()},
 			SessionMaxAgeSeconds: 300,
 			SessionName:          "ssn",
@@ -246,7 +246,7 @@ func (args MasterArgs) BuildSerializeableOAuthConfig() (*configapi.OAuthConfig, 
 	config.IdentityProviders = append(config.IdentityProviders,
 		configapi.IdentityProvider{
 			Usage: configapi.IdentityProviderUsage{
-				ProviderScope:   "anypassword",
+				ProviderName:    "anypassword",
 				UseAsChallenger: true,
 				UseAsLogin:      true,
 			},

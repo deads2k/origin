@@ -233,10 +233,10 @@ func getCSRF() csrf.CSRF {
 }
 
 func (c *AuthConfig) getSessionAuth() *session.Authenticator {
-	if c.Options.SessionAuthenticationConfig != nil {
+	if c.Options.SessionConfig != nil {
 		if c.sessionAuth == nil {
-			sessionStore := session.NewStore(int(c.Options.SessionAuthenticationConfig.SessionMaxAgeSeconds), c.Options.SessionAuthenticationConfig.SessionSecrets...)
-			c.sessionAuth = session.NewAuthenticator(sessionStore, c.Options.SessionAuthenticationConfig.SessionName)
+			sessionStore := session.NewStore(int(c.Options.SessionConfig.SessionMaxAgeSeconds), c.Options.SessionConfig.SessionSecrets...)
+			c.sessionAuth = session.NewAuthenticator(sessionStore, c.Options.SessionConfig.SessionName)
 		}
 	}
 	return c.sessionAuth
@@ -301,7 +301,7 @@ func (c *AuthConfig) getAuthenticationHandler(mux cmdutil.Mux, errorHandler hand
 
 	for _, identityProvider := range c.Options.IdentityProviders {
 		userRegistry := useretcd.New(c.EtcdHelper, user.NewDefaultUserInitStrategy())
-		identityMapper := identitymapper.NewAlwaysCreateUserIdentityToUserMapper(identityProvider.Usage.ProviderScope, userRegistry)
+		identityMapper := identitymapper.NewAlwaysCreateUserIdentityToUserMapper(identityProvider.Usage.ProviderName, userRegistry)
 
 		switch provider := identityProvider.Provider.Object.(type) {
 		case (*configapi.OAuthRedirectingIdentityProvider):
@@ -325,7 +325,7 @@ func (c *AuthConfig) getAuthenticationHandler(mux cmdutil.Mux, errorHandler hand
 			}
 
 			mux.Handle(callbackPath, oauthHandler)
-			redirectors[identityProvider.Usage.ProviderScope] = oauthHandler
+			redirectors[identityProvider.Usage.ProviderName] = oauthHandler
 
 		case (*configapi.BasicAuthPasswordIdentityProvider),
 			(*configapi.AllowAllPasswordIdentityProvider),
@@ -357,7 +357,7 @@ func (c *AuthConfig) getPasswordAuthenticator(identityProvider configapi.Identit
 	// TODO presumably we'll want either a list of what we've got or a way to describe a registry of these
 	// hard-coded strings as a stand-in until it gets sorted out
 	userRegistry := useretcd.New(c.EtcdHelper, user.NewDefaultUserInitStrategy())
-	identityMapper := identitymapper.NewAlwaysCreateUserIdentityToUserMapper(identityProvider.Usage.ProviderScope, userRegistry)
+	identityMapper := identitymapper.NewAlwaysCreateUserIdentityToUserMapper(identityProvider.Usage.ProviderName, userRegistry)
 
 	switch provider := identityProvider.Provider.Object.(type) {
 	case (*configapi.AllowAllPasswordIdentityProvider):
@@ -420,10 +420,10 @@ func (c *AuthConfig) getAuthenticationRequestHandler() (authenticator.Request, e
 
 	for _, identityProvider := range c.Options.IdentityProviders {
 		userRegistry := useretcd.New(c.EtcdHelper, user.NewDefaultUserInitStrategy())
-		identityMapper := identitymapper.NewAlwaysCreateUserIdentityToUserMapper(identityProvider.Usage.ProviderScope, userRegistry)
+		identityMapper := identitymapper.NewAlwaysCreateUserIdentityToUserMapper(identityProvider.Usage.ProviderName, userRegistry)
 
 		switch provider := identityProvider.Provider.Object.(type) {
-		case (*configapi.XRemoteUserIdentityProvider):
+		case (*configapi.RequestHeaderIdentityProvider):
 			var authRequestHandler authenticator.Request
 
 			authRequestConfig := &headerrequest.Config{
@@ -432,15 +432,15 @@ func (c *AuthConfig) getAuthenticationRequestHandler() (authenticator.Request, e
 			authRequestHandler = headerrequest.NewAuthenticator(authRequestConfig, identityMapper)
 
 			// Wrap with an x509 verifier
-			if len(provider.CAFile) > 0 {
-				caData, err := ioutil.ReadFile(provider.CAFile)
+			if len(provider.ClientCA) > 0 {
+				caData, err := ioutil.ReadFile(provider.ClientCA)
 				if err != nil {
-					return nil, fmt.Errorf("Error reading %s: %v", provider.CAFile, err)
+					return nil, fmt.Errorf("Error reading %s: %v", provider.ClientCA, err)
 				}
 				opts := x509request.DefaultVerifyOptions()
 				opts.Roots = x509.NewCertPool()
 				if ok := opts.Roots.AppendCertsFromPEM(caData); !ok {
-					return nil, fmt.Errorf("Error loading certs from %s: %v", provider.CAFile, err)
+					return nil, fmt.Errorf("Error loading certs from %s: %v", provider.ClientCA, err)
 				}
 
 				authRequestHandler = x509request.NewVerifier(opts, authRequestHandler)
