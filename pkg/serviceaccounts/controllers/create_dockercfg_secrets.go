@@ -166,11 +166,13 @@ func (e *DockercfgController) createDockercfgSecretIfNeeded(serviceAccount *api.
 
 	// if we get here, then we need to create a new dockercfg secret
 	// before we do expensive things, make sure our view of the service account is up to date
-	// if it isn't, we'll get notified of an update event later and get to try again
-	// this will only prevent interactions between successive runs of this controller with itself, but that is useful
 	if liveServiceAccount, err := e.client.ServiceAccounts(serviceAccount.Namespace).Get(serviceAccount.Name); err != nil {
 		return err
 	} else if liveServiceAccount.ResourceVersion != serviceAccount.ResourceVersion {
+		// our view of the service account is not up to date
+		// we'll get notified of an update event later and get to try again
+		// this only prevent interactions between successive runs of this controller's event handlers, but that is useful
+		glog.V(2).Infof("View of ServiceAccount %s/%s is not up to date, skipping dockercfg creation", serviceAccount.Namespace, serviceAccount.Name)
 		return nil
 	}
 
@@ -183,6 +185,7 @@ func (e *DockercfgController) createDockercfgSecretIfNeeded(serviceAccount *api.
 	if kapierrors.IsConflict(err) {
 		// nothing to do.  Our choice was stale or we got a conflict.  Either way that means that the service account was updated.  We simply need to return because we'll get an update notification later
 		// we do need to clean up our dockercfgSecret.  token secrets are cleaned up by the controller handling service account dockercfg secret deletes
+		glog.V(2).Infof("Deleting secret %s/%s (err=%v)", dockercfgSecret.Namespace, dockercfgSecret.Name, err)
 		if err := e.client.Secrets(dockercfgSecret.Namespace).Delete(dockercfgSecret.Name); err != nil {
 			glog.Error(err)
 		}
@@ -204,7 +207,7 @@ func (e *DockercfgController) createDockerPullSecretReference(staleServiceAccoun
 
 	// if we're trying to create a reference based on stale lists of dockercfg secrets, let the caller know
 	if !reflect.DeepEqual(staleDockercfgMountableSecrets.List(), mountableDockercfgSecrets.List()) || !reflect.DeepEqual(staleImageDockercfgPullSecrets.List(), imageDockercfgPullSecrets.List()) {
-		return kapierrors.NewConflict("ServiceAccount", staleServiceAccount.Name, fmt.Errorf("cannot add reference based on stale data.  decision made for %v, but live version is %v", staleServiceAccount.ResourceVersion, liveServiceAccount.ResourceVersion))
+		return kapierrors.NewConflict("ServiceAccount", staleServiceAccount.Name, fmt.Errorf("cannot add reference to %s based on stale data.  decision made for %v,%v, but live version is %v,%v", dockercfgSecretName, staleDockercfgMountableSecrets.List(), staleImageDockercfgPullSecrets.List(), mountableDockercfgSecrets.List(), imageDockercfgPullSecrets.List()))
 	}
 
 	changed := false
@@ -220,6 +223,7 @@ func (e *DockercfgController) createDockerPullSecretReference(staleServiceAccoun
 
 	if changed {
 		if _, err = e.client.ServiceAccounts(liveServiceAccount.Namespace).Update(liveServiceAccount); err != nil {
+			// TODO: retry on API conflicts in case the conflict was unrelated to our generated dockercfg secrets?
 			return err
 		}
 	}
@@ -268,6 +272,7 @@ func (e *DockercfgController) createTokenSecret(serviceAccount *api.ServiceAccou
 	}
 
 	// the token wasn't ever created, attempt deletion
+	glog.Warningf("Deleting unfilled token secret %s/%s", tokenSecret.Namespace, tokenSecret.Name)
 	if err := e.client.Secrets(tokenSecret.Namespace).Delete(tokenSecret.Name); err != nil {
 		glog.Error(err)
 	}
