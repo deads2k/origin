@@ -34,7 +34,7 @@ func NewDockercfgDeletedController(cl client.Interface, options DockercfgDeleted
 		client: cl,
 	}
 
-	dockercfgSelector := fields.SelectorFromSet(map[string]string{client.SecretType: string(api.SecretTypeDockercfg)})
+	dockercfgSelector := fields.OneTermEqualSelector(client.SecretType, string(api.SecretTypeDockercfg))
 	_, e.secretController = framework.NewInformer(
 		&cache.ListWatch{
 			ListFunc: func() (runtime.Object, error) {
@@ -55,7 +55,7 @@ func NewDockercfgDeletedController(cl client.Interface, options DockercfgDeleted
 }
 
 // The DockercfgDeletedController watches for service account dockercfg secrets to be deleted
-// It removes the corresponding token secret and service accoutn references.
+// It removes the corresponding token secret and service account references.
 type DockercfgDeletedController struct {
 	stopChan chan struct{}
 
@@ -83,13 +83,16 @@ func (e *DockercfgDeletedController) Stop() {
 // secretDeleted reacts to a Secret being deleted by looking to see if it's a dockercfg secret for a service account, in which case it
 // it removes the references from the service account and removes the token created to back the dockercfgSecret
 func (e *DockercfgDeletedController) secretDeleted(obj interface{}) {
-	dockercfgSecret := obj.(*api.Secret)
-
+	dockercfgSecret, ok := obj.(*api.Secret)
+	if !ok {
+		return
+	}
 	if _, exists := dockercfgSecret.Annotations[ServiceAccountTokenSecretNameKey]; !exists {
 		return
 	}
+
 	for i := 1; i <= NumServiceAccountUpdateRetries; i++ {
-		if _, err := e.removeDockercfgSecretReference(dockercfgSecret); err != nil {
+		if err := e.removeDockercfgSecretReference(dockercfgSecret); err != nil {
 			if kapierrors.IsConflict(err) && i < NumServiceAccountUpdateRetries {
 				time.Sleep(wait.Jitter(100*time.Millisecond, 0.0))
 				continue
@@ -110,45 +113,54 @@ func (e *DockercfgDeletedController) secretDeleted(obj interface{}) {
 }
 
 // removeDockercfgSecretReference updates the given ServiceAccount to remove ImagePullSecret and Secret references
-func (e *DockercfgDeletedController) removeDockercfgSecretReference(dockercfgSecret *api.Secret) (bool, error) {
+func (e *DockercfgDeletedController) removeDockercfgSecretReference(dockercfgSecret *api.Secret) error {
 	serviceAccount, err := e.getServiceAccount(dockercfgSecret)
 	if kapierrors.IsNotFound(err) {
 		// if the service account is gone, no work to do
-		return false, nil
+		return nil
 	}
 	if err != nil {
-		return false, err
+		return err
 	}
+
+	changed := false
 
 	secrets := []api.ObjectReference{}
 	for _, s := range serviceAccount.Secrets {
-		if s.Name != dockercfgSecret.Name {
-			secrets = append(secrets, s)
+		if s.Name == dockercfgSecret.Name {
+			changed = true
+			continue
 		}
+
+		secrets = append(secrets, s)
 	}
 	serviceAccount.Secrets = secrets
 
 	imagePullSecrets := []api.LocalObjectReference{}
 	for _, s := range serviceAccount.ImagePullSecrets {
-		if s.Name != dockercfgSecret.Name {
-			imagePullSecrets = append(imagePullSecrets, s)
+		if s.Name == dockercfgSecret.Name {
+			changed = true
+			continue
 		}
+
+		imagePullSecrets = append(imagePullSecrets, s)
 	}
 	serviceAccount.ImagePullSecrets = imagePullSecrets
 
-	_, err = e.client.ServiceAccounts(dockercfgSecret.Namespace).Update(serviceAccount)
-	if err != nil {
-		return false, err
+	if changed {
+		_, err = e.client.ServiceAccounts(dockercfgSecret.Namespace).Update(serviceAccount)
+		if err != nil {
+			return err
+		}
 	}
 
-	return true, nil
+	return nil
 }
 
-// getServiceAccount returns the ServiceAccount referenced by the given secret. If the secret is not
-// of type ServiceAccountToken, or if the referenced ServiceAccount does not exist, nil is returned
+// getServiceAccount returns the ServiceAccount referenced by the given secret.  return nil, but no error if the secret doesn't reference a service account
 func (e *DockercfgDeletedController) getServiceAccount(secret *api.Secret) (*api.ServiceAccount, error) {
 	saName, saUID := secret.Annotations[api.ServiceAccountNameKey], secret.Annotations[api.ServiceAccountUIDKey]
-	if len(saName) == 0 {
+	if len(saName) == 0 || len(saUID) == 0 {
 		return nil, nil
 	}
 

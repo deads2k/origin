@@ -2,6 +2,8 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
+	"net"
 	"reflect"
 	"time"
 
@@ -20,7 +22,7 @@ import (
 
 // DockerRegistryServiceControllerOptions contains options for the DockerRegistryServiceController
 type DockerRegistryServiceControllerOptions struct {
-	// Resync is the time.Duration at which to fully re-list service accounts.
+	// Resync is the time.Duration at which to fully re-list services.
 	// If zero, re-list will be delayed as long as possible
 	Resync time.Duration
 
@@ -89,6 +91,15 @@ func (e *DockerRegistryServiceController) Stop() {
 	}
 }
 
+func getServiceLocation(service *api.Service) string {
+	hasPortalIP := (len(service.Spec.PortalIP) > 0) && (net.ParseIP(service.Spec.PortalIP) != nil)
+	if hasPortalIP && len(service.Spec.Ports) > 0 {
+		return fmt.Sprintf("%s:%d", service.Spec.PortalIP, service.Spec.Ports[0].Port)
+	}
+
+	return OpenshiftDockerURL
+}
+
 // serviceAdded reacts to the creation of a docker-registry service by updating all service account dockercfg secrets and
 // changing all interestedURLs
 func (e *DockerRegistryServiceController) serviceAdded(obj interface{}) {
@@ -97,12 +108,7 @@ func (e *DockerRegistryServiceController) serviceAdded(obj interface{}) {
 		return
 	}
 
-	serviceLocation := service.Spec.PortalIP
-	if len(serviceLocation) == 0 {
-		serviceLocation = OpenshiftDockerURL
-	}
-
-	if err := e.handleLocationChange(serviceLocation); err != nil {
+	if err := e.handleLocationChange(getServiceLocation(service)); err != nil {
 		glog.Error(err)
 	}
 }
@@ -119,19 +125,17 @@ func (e *DockerRegistryServiceController) serviceUpdated(oldObj interface{}, new
 		return
 	}
 
-	serviceLocation := newService.Spec.PortalIP
-	if len(serviceLocation) == 0 {
-		serviceLocation = OpenshiftDockerURL
-	}
-
-	if err := e.handleLocationChange(serviceLocation); err != nil {
+	if err := e.handleLocationChange(getServiceLocation(newService)); err != nil {
 		glog.Error(err)
 	}
 }
 
-// serviceDeleted reacts to a Service deletion by deleting all corresponding ServiceToken Secrets
+// serviceDeleted reacts to the docker-registry deletion by updating all the generated dockercfg secrets
 func (e *DockerRegistryServiceController) serviceDeleted(obj interface{}) {
-	service := obj.(*api.Service)
+	service, ok := obj.(*api.Service)
+	if !ok {
+		return
+	}
 	if service.Name != e.registryServiceName {
 		return
 	}
@@ -141,7 +145,7 @@ func (e *DockerRegistryServiceController) serviceDeleted(obj interface{}) {
 	}
 }
 
-// createDockercfgSecretIfNeeded makes sure at least one ServiceToken secret exists, and is included in the service's Secrets list
+// handleLocationChange goes through all service account dockercfg secrets and updates them to point at a new docker-registry location
 func (e *DockerRegistryServiceController) handleLocationChange(serviceLocation string) error {
 	e.dockercfgController.SetDockerURL(serviceLocation)
 
@@ -164,6 +168,12 @@ func (e *DockerRegistryServiceController) handleLocationChange(serviceLocation s
 			continue
 		}
 		oldKey := keys.List()[0]
+
+		// if there's no change, skip
+		if oldKey == serviceLocation {
+			continue
+		}
+
 		dockercfgMap[serviceLocation] = dockercfgMap[oldKey]
 		delete(dockercfgMap, oldKey)
 		t := credentialprovider.DockerConfig(dockercfgMap)
@@ -194,7 +204,7 @@ func (e *DockerRegistryServiceController) listDockercfgSecrets() ([]*api.Secret,
 
 	dockercfgSecretsForThisSA := []*api.Secret{}
 	for i, currSecret := range potentialSecrets.Items {
-		if _, exists := currSecret.Annotations[ServiceAccountTokenSecretNameKey]; exists {
+		if len(currSecret.Annotations[ServiceAccountTokenSecretNameKey]) > 0 {
 			dockercfgSecretsForThisSA = append(dockercfgSecretsForThisSA, &potentialSecrets.Items[i])
 		}
 	}

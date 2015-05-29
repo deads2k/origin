@@ -25,7 +25,7 @@ import (
 )
 
 const ServiceAccountTokenSecretNameKey = "openshift.io/token-secret.name"
-const OpenshiftDockerURL = "docker-registry.default.svc.cluster.local"
+const OpenshiftDockerURL = "docker-registry.default.svc.cluster.local:5000"
 
 // DockercfgControllerOptions contains options for the DockercfgController
 type DockercfgControllerOptions struct {
@@ -142,33 +142,28 @@ func getTokenSecretNamePrefix(serviceAccount *api.ServiceAccount) string {
 // createDockercfgSecretIfNeeded makes sure at least one ServiceAccountToken secret exists, and is included in the serviceAccount's Secrets list
 func (e *DockercfgController) createDockercfgSecretIfNeeded(serviceAccount *api.ServiceAccount) error {
 
+	mountableDockercfgSecrets, imageDockercfgPullSecrets := getGeneratedDockercfgSecretNames(serviceAccount)
+
 	// look for an ImagePullSecret in the form
-	dockercfgSecretName := ""
-	foundDockercfgImagePullSecret := false
-	for _, pullSecret := range serviceAccount.ImagePullSecrets {
-		if strings.HasPrefix(pullSecret.Name, getDockercfgSecretNamePrefix(serviceAccount)) {
-			foundDockercfgImagePullSecret = true
-			dockercfgSecretName = pullSecret.Name
-			break
-		}
-	}
-	foundDockercfgMountableSecret := false
-	for _, mountableSecret := range serviceAccount.Secrets {
-		if strings.HasPrefix(mountableSecret.Name, getDockercfgSecretNamePrefix(serviceAccount)) {
-			foundDockercfgMountableSecret = true
-			dockercfgSecretName = mountableSecret.Name
-			break
-		}
-	}
+	foundPullSecret := len(imageDockercfgPullSecrets) > 0
+	foundMountableSecret := len(mountableDockercfgSecrets) > 0
 
 	switch {
 	// if we already have a docker pull secret, simply return
-	case foundDockercfgImagePullSecret && foundDockercfgMountableSecret:
+	case foundPullSecret && foundMountableSecret:
 		return nil
 
-	case foundDockercfgImagePullSecret && !foundDockercfgMountableSecret, !foundDockercfgImagePullSecret && foundDockercfgMountableSecret:
-		staleDecision, err := e.createDockerPullSecretReference(serviceAccount, dockercfgSecretName)
-		if staleDecision || kapierrors.IsConflict(err) {
+	case foundPullSecret && !foundMountableSecret, !foundPullSecret && foundMountableSecret:
+		dockercfgSecretName := ""
+		switch {
+		case foundPullSecret:
+			dockercfgSecretName = imageDockercfgPullSecrets.List()[0]
+		case foundMountableSecret:
+			dockercfgSecretName = mountableDockercfgSecrets.List()[0]
+		}
+
+		err := e.createDockerPullSecretReference(serviceAccount, dockercfgSecretName)
+		if kapierrors.IsConflict(err) {
 			// nothing to do.  Our choice was stale or we got a conflict.  Either way that means that the service account was updated.  We simply need to return because we'll get an update notification later
 			return nil
 		}
@@ -183,8 +178,8 @@ func (e *DockercfgController) createDockercfgSecretIfNeeded(serviceAccount *api.
 		return err
 	}
 
-	staleDecision, err := e.createDockerPullSecretReference(serviceAccount, dockercfgSecret.Name)
-	if staleDecision || kapierrors.IsConflict(err) {
+	err = e.createDockerPullSecretReference(serviceAccount, dockercfgSecret.Name)
+	if kapierrors.IsConflict(err) {
 		// nothing to do.  Our choice was stale or we got a conflict.  Either way that means that the service account was updated.  We simply need to return because we'll get an update notification later
 		// we do need to clean up our dockercfgSecret.  token secrets are cleaned up by the controller handling service account dockercfg secret deletes
 		if err := e.client.Secrets(dockercfgSecret.Namespace).Delete(dockercfgSecret.Name); err != nil {
@@ -197,42 +192,42 @@ func (e *DockercfgController) createDockercfgSecretIfNeeded(serviceAccount *api.
 }
 
 // createDockerPullSecretReference updates a service account to reference the dockercfgSecret as a Secret and an ImagePullSecret
-func (e *DockercfgController) createDockerPullSecretReference(staleServiceAccount *api.ServiceAccount, dockercfgSecretName string) ( /*isStale*/ bool, error) {
+func (e *DockercfgController) createDockerPullSecretReference(staleServiceAccount *api.ServiceAccount, dockercfgSecretName string) error {
 	liveServiceAccount, err := e.client.ServiceAccounts(staleServiceAccount.Namespace).Get(staleServiceAccount.Name)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	mountableSecrets, imagePullSecrets := getSecretNames(liveServiceAccount)
-	staleMountableSecrets, staleImagePullSecrets := getSecretNames(staleServiceAccount)
+	mountableDockercfgSecrets, imageDockercfgPullSecrets := getGeneratedDockercfgSecretNames(liveServiceAccount)
+	staleDockercfgMountableSecrets, staleImageDockercfgPullSecrets := getGeneratedDockercfgSecretNames(staleServiceAccount)
 
-	// if we're trying to create a reference based on stale data, let the caller know
-	if !reflect.DeepEqual(staleMountableSecrets.List(), mountableSecrets.List()) || !reflect.DeepEqual(staleImagePullSecrets.List(), imagePullSecrets.List()) {
-		return true, fmt.Errorf("cannot add reference based on stale data.  decision made for %v, but live version is %v", staleServiceAccount.ResourceVersion, liveServiceAccount.ResourceVersion)
+	// if we're trying to create a reference based on stale lists of dockercfg secrets, let the caller know
+	if !reflect.DeepEqual(staleDockercfgMountableSecrets.List(), mountableDockercfgSecrets.List()) || !reflect.DeepEqual(staleImageDockercfgPullSecrets.List(), imageDockercfgPullSecrets.List()) {
+		return kapierrors.NewConflict("ServiceAccount", staleServiceAccount.Name, fmt.Errorf("cannot add reference based on stale data.  decision made for %v, but live version is %v", staleServiceAccount.ResourceVersion, liveServiceAccount.ResourceVersion))
 	}
 
 	changed := false
-	if !mountableSecrets.Has(dockercfgSecretName) {
+	if !mountableDockercfgSecrets.Has(dockercfgSecretName) {
 		liveServiceAccount.Secrets = append(liveServiceAccount.Secrets, api.ObjectReference{Name: dockercfgSecretName})
 		changed = true
 	}
 
-	if !imagePullSecrets.Has(dockercfgSecretName) {
+	if !imageDockercfgPullSecrets.Has(dockercfgSecretName) {
 		liveServiceAccount.ImagePullSecrets = append(liveServiceAccount.ImagePullSecrets, api.LocalObjectReference{Name: dockercfgSecretName})
 		changed = true
 	}
 
 	if changed {
 		if _, err = e.client.ServiceAccounts(liveServiceAccount.Namespace).Update(liveServiceAccount); err != nil {
-			return false, err
+			return err
 		}
 	}
-	return false, nil
+	return nil
 }
 
 const (
-	tokenSecretWaitInterval = 100 * time.Millisecond
-	tokenSecretWaitTimes    = 20
+	tokenSecretWaitInterval = 20 * time.Millisecond
+	tokenSecretWaitTimes    = 100
 )
 
 // createTokenSecret creates a token secret for a given service account.  Returns the name of the token
@@ -263,7 +258,7 @@ func (e *DockercfgController) createTokenSecret(serviceAccount *api.ServiceAccou
 			return nil, err
 		}
 
-		if _, exists := liveTokenSecret.Data[api.ServiceAccountTokenKey]; exists {
+		if len(liveTokenSecret.Data[api.ServiceAccountTokenKey]) > 0 {
 			return liveTokenSecret, nil
 		}
 
@@ -330,15 +325,21 @@ func getSecretReferences(serviceAccount *api.ServiceAccount) util.StringSet {
 	return references
 }
 
-func getSecretNames(serviceAccount *api.ServiceAccount) (util.StringSet, util.StringSet) {
-	mountableSecrets := util.StringSet{}
-	imagePullSecrets := util.StringSet{}
+func getGeneratedDockercfgSecretNames(serviceAccount *api.ServiceAccount) (util.StringSet, util.StringSet) {
+	mountableDockercfgSecrets := util.StringSet{}
+	imageDockercfgPullSecrets := util.StringSet{}
+
+	secretNamePrefix := getDockercfgSecretNamePrefix(serviceAccount)
 
 	for _, s := range serviceAccount.Secrets {
-		mountableSecrets.Insert(s.Name)
+		if strings.HasPrefix(s.Name, secretNamePrefix) {
+			mountableDockercfgSecrets.Insert(s.Name)
+		}
 	}
 	for _, s := range serviceAccount.ImagePullSecrets {
-		imagePullSecrets.Insert(s.Name)
+		if strings.HasPrefix(s.Name, secretNamePrefix) {
+			imageDockercfgPullSecrets.Insert(s.Name)
+		}
 	}
-	return mountableSecrets, imagePullSecrets
+	return mountableDockercfgSecrets, imageDockercfgPullSecrets
 }

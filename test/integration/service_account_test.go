@@ -226,7 +226,6 @@ func TestAutomaticCreationOfPullSecrets(t *testing.T) {
 	saNamespace := api.NamespaceDefault
 	saName := serviceaccountadmission.DefaultServiceAccountName
 
-	// Start one OpenShift master as "cluster1" to play the external kube server
 	_, clusterAdminConfig, err := testutil.StartTestMaster()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

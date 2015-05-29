@@ -27,7 +27,7 @@ func NewDockercfgTokenDeletedController(cl client.Interface, options DockercfgTo
 		client: cl,
 	}
 
-	dockercfgSelector := fields.SelectorFromSet(map[string]string{client.SecretType: string(api.SecretTypeServiceAccountToken)})
+	dockercfgSelector := fields.OneTermEqualSelector(client.SecretType, string(api.SecretTypeServiceAccountToken))
 	_, e.secretController = framework.NewInformer(
 		&cache.ListWatch{
 			ListFunc: func() (runtime.Object, error) {
@@ -47,11 +47,8 @@ func NewDockercfgTokenDeletedController(cl client.Interface, options DockercfgTo
 	return e
 }
 
-// The DockercfgTokenDeletedController watches for service account tokens to be created or deleted.
-// On create, it creates a corresponding dockercfg secret and attaches it to the service account
-// as both an ImagePullSecret and as a MountableSecret.  On delete, it removes the secret
-// and the references.  It does not watch for changes to the ServiceAccount.  If a user wishes to
-// remove references to the ImagePullSecret, they may freely do so.
+// The DockercfgTokenDeletedController watches for service account tokens to be deleted.
+// On delete, it removes the associated dockercfg secret if it exists.
 type DockercfgTokenDeletedController struct {
 	stopChan chan struct{}
 
@@ -78,37 +75,43 @@ func (e *DockercfgTokenDeletedController) Stop() {
 
 // secretDeleted reacts to a token secret being deleted by looking for a corresponding dockercfg secret and deleting it if it exists
 func (e *DockercfgTokenDeletedController) secretDeleted(obj interface{}) {
-	tokenSecret := obj.(*api.Secret)
+	tokenSecret, ok := obj.(*api.Secret)
+	if !ok {
+		return
+	}
 
-	dockercfgSecret, err := e.findDockercfgSecret(tokenSecret)
+	dockercfgSecrets, err := e.findDockercfgSecrets(tokenSecret)
 	if err != nil {
 		glog.Error(err)
 		return
 	}
-	if dockercfgSecret == nil {
+	if len(dockercfgSecrets) == 0 {
 		return
 	}
 
-	// remove the reference token secret
-	if err := e.client.Secrets(dockercfgSecret.Namespace).Delete(dockercfgSecret.Name); err != nil {
-		glog.Error(err)
-		return
+	// remove the reference token secrets
+	for _, dockercfgSecret := range dockercfgSecrets {
+		if err := e.client.Secrets(dockercfgSecret.Namespace).Delete(dockercfgSecret.Name); err != nil {
+			glog.Error(err)
+		}
 	}
 }
 
 // findDockercfgSecret checks all the secrets in the namespace to see if the token secret has any existing dockercfg secrets that reference it
-func (e *DockercfgTokenDeletedController) findDockercfgSecret(tokenSecret *api.Secret) (*api.Secret, error) {
-	dockercfgSelector := fields.SelectorFromSet(map[string]string{client.SecretType: string(api.SecretTypeDockercfg)})
+func (e *DockercfgTokenDeletedController) findDockercfgSecrets(tokenSecret *api.Secret) ([]*api.Secret, error) {
+	dockercfgSecrets := []*api.Secret{}
+
+	dockercfgSelector := fields.OneTermEqualSelector(client.SecretType, string(api.SecretTypeDockercfg))
 	potentialSecrets, err := e.client.Secrets(tokenSecret.Namespace).List(labels.Everything(), dockercfgSelector)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, currSecret := range potentialSecrets.Items {
+	for i, currSecret := range potentialSecrets.Items {
 		if currSecret.Annotations[ServiceAccountTokenSecretNameKey] == tokenSecret.Name {
-			return &currSecret, nil
+			dockercfgSecrets = append(dockercfgSecrets, &potentialSecrets.Items[i])
 		}
 	}
 
-	return nil, nil
+	return dockercfgSecrets, nil
 }
