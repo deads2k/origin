@@ -22,6 +22,8 @@ import (
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/util/wait"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/watch"
 	"github.com/golang/glog"
+
+	"github.com/openshift/origin/pkg/util/namer"
 )
 
 const ServiceAccountTokenSecretNameKey = "openshift.io/token-secret.name"
@@ -116,27 +118,17 @@ func (e *DockercfgController) serviceAccountUpdated(oldObj interface{}, newObj i
 }
 
 const (
-	dockercfgToken = "-dockercfg-"
-
 	// These constants are here to create a name that is short enough to survive chopping by generate name
-	maxNameLength               = 63
-	randomLength                = 5
-	maxServiceAccountNameLength = maxNameLength - randomLength - len(dockercfgToken)
+	maxNameLength             = 63
+	randomLength              = 5
+	maxSecretPrefixNameLength = maxNameLength - randomLength
 )
 
-func getUsableServiceAccountNamePrefix(serviceAccountName string) string {
-	if len(serviceAccountName) > maxServiceAccountNameLength {
-		serviceAccountName = serviceAccountName[:maxServiceAccountNameLength]
-	}
-
-	return serviceAccountName
-}
-
 func getDockercfgSecretNamePrefix(serviceAccount *api.ServiceAccount) string {
-	return getUsableServiceAccountNamePrefix(serviceAccount.Name) + dockercfgToken
+	return namer.GetName(serviceAccount.Name, "dockercfg-", maxSecretPrefixNameLength)
 }
 func getTokenSecretNamePrefix(serviceAccount *api.ServiceAccount) string {
-	return getUsableServiceAccountNamePrefix(serviceAccount.Name) + "-token-"
+	return namer.GetName(serviceAccount.Name, "token-", maxSecretPrefixNameLength)
 }
 
 // createDockercfgSecretIfNeeded makes sure at least one ServiceAccountToken secret exists, and is included in the serviceAccount's Secrets list
@@ -173,6 +165,15 @@ func (e *DockercfgController) createDockercfgSecretIfNeeded(serviceAccount *api.
 	}
 
 	// if we get here, then we need to create a new dockercfg secret
+	// before we do expensive things, make sure our view of the service account is up to date
+	// if it isn't, we'll get notified of an update event later and get to try again
+	// this will only prevent interactions between successive runs of this controller with itself, but that is useful
+	if liveServiceAccount, err := e.client.ServiceAccounts(serviceAccount.Namespace).Get(serviceAccount.Name); err != nil {
+		return err
+	} else if liveServiceAccount.ResourceVersion != serviceAccount.ResourceVersion {
+		return nil
+	}
+
 	dockercfgSecret, err := e.createDockerPullSecret(serviceAccount)
 	if err != nil {
 		return err
