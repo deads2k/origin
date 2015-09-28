@@ -71,9 +71,15 @@ wait_for_command 'oc get pods -l deploymentconfig=openldap-server --template="{{
 LDAP_SERVICE_IP=$(oc get --output-version=v1beta3 --template="{{ .spec.portalIP }}" service openldap-server)
 
 
-oc login -u system:admin
+oc login -u system:admin -n default
 
 echo "[INFO] Running extended tests"
+
+sleep 5
+
+cp test/extended/authentication/sync-schema1-group1.yaml ${BASETMPDIR}
+os::util::sed "s/LDAP_SERVICE_IP/${LDAP_SERVICE_IP}/g" ${BASETMPDIR}/sync-schema1-group1.yaml
+openshift ex sync-groups --sync-config=${BASETMPDIR}/sync-schema1-group1.yaml --confirm
 
 # Run the tests
 #LDAP_IP=${LDAP_SERVICE_IP} TMPDIR=${BASETMPDIR} ginkgo -progress -stream -v -focus="authentication: OpenLDAP" ${OS_OUTPUT_BINPATH}/extended.test
