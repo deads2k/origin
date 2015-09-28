@@ -244,8 +244,8 @@ func ValidateExtendedArguments(config api.ExtendedArguments, flagFunc func(*pfla
 }
 
 func ValidateLDAPSyncConfig(config api.LDAPSyncConfig) ValidationResults {
-	validationResults := ValidateLDAPClientConfig("config",
-		config.Host,
+	validationResults := ValidateLDAPClientConfig("",
+		config.URL,
 		config.BindDN,
 		config.BindPassword,
 		config.CA,
@@ -271,9 +271,11 @@ func ValidateLDAPSyncConfig(config api.LDAPSyncConfig) ValidationResults {
 		validationResults.AddWarnings(configResults.Warnings...)
 		numConfigs++
 	}
-	if numConfigs != 1 {
-		validationResults.AddErrors(fielderrors.NewFieldInvalid("", config.LDAPSchemaSpecificConfig,
-			"only one schema-specific config is allowed"))
+	if numConfigs > 1 {
+		validationResults.AddErrors(fielderrors.NewFieldInvalid("", config, "only one schema-specific config is allowed"))
+	}
+	if numConfigs == 0 {
+		validationResults.AddErrors(fielderrors.NewFieldInvalid("", config, "exactly one schema-specific config is required"))
 	}
 
 	return validationResults
@@ -283,13 +285,13 @@ func ValidateLDAPClientConfig(parent, url, bindDN, bindPassword, CA string, inse
 	validationResults := ValidationResults{}
 
 	if len(url) == 0 {
-		validationResults.AddErrors(fielderrors.NewFieldRequired(parent + ".host"))
+		validationResults.AddErrors(fielderrors.NewFieldRequired(parent + ".url"))
 		return validationResults
 	}
 
 	u, err := ldaputil.ParseURL(url)
 	if err != nil {
-		validationResults.AddErrors(fielderrors.NewFieldInvalid(parent+".URL", url, err.Error()))
+		validationResults.AddErrors(fielderrors.NewFieldInvalid(parent+".url", url, err.Error()))
 		return validationResults
 	}
 
@@ -333,6 +335,10 @@ func ValidateRFC2307Config(config *api.RFC2307Config) ValidationResults {
 	groupQueryResults := ValidateLDAPQuery("groupQuery", config.GroupQuery)
 	validationResults.AddErrors(groupQueryResults.Errors...)
 	validationResults.AddWarnings(groupQueryResults.Warnings...)
+
+	if len(config.GroupUIDAttributes) == 0 {
+		validationResults.AddErrors(fielderrors.NewFieldRequired("groupUID"))
+	}
 
 	if len(config.GroupNameAttributes) == 0 {
 		validationResults.AddErrors(fielderrors.NewFieldRequired("groupName"))

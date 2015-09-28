@@ -241,7 +241,7 @@ func (o *SyncGroupsOptions) Run() error {
 	// In order to create the GroupSyncer, we need to build its' parts:
 	// interpret user-provided configuration
 	clientConfig, err := ldaputil.NewLDAPClientConfig(
-		o.Config.Host,
+		o.Config.URL,
 		o.Config.BindDN,
 		o.Config.BindPassword,
 		o.Config.CA,
@@ -279,6 +279,7 @@ func (o *SyncGroupsOptions) Run() error {
 		// the schema-specific ldapInterface is built from the config
 		ldapInterface := rfc2307.NewLDAPInterface(clientConfig,
 			groupQuery,
+			o.Config.RFC2307Config.GroupUIDAttributes,
 			o.Config.RFC2307Config.GroupNameAttributes,
 			o.Config.RFC2307Config.GroupMembershipAttributes,
 			userQuery,

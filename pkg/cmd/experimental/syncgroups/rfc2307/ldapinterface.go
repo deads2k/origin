@@ -10,6 +10,7 @@ import (
 // NewLDAPInterface builds a new LDAPInterface using a schema-appropriate config
 func NewLDAPInterface(clientConfig ldaputil.LDAPClientConfig,
 	groupQuery ldaputil.LDAPQueryOnAttribute,
+	groupUIDAttributes []string,
 	groupNameAttributes []string,
 	groupMembershipAttributes []string,
 	userQuery ldaputil.LDAPQueryOnAttribute,
@@ -17,7 +18,7 @@ func NewLDAPInterface(clientConfig ldaputil.LDAPClientConfig,
 	return LDAPInterface{
 		clientConfig:              clientConfig,
 		groupQuery:                groupQuery,
-		groupNameAttributes:       groupNameAttributes,
+		groupUIDAttributes:        groupUIDAttributes,
 		groupMembershipAttributes: groupMembershipAttributes,
 		userQuery:                 userQuery,
 		userNameAttributes:        userNameAttributes,
@@ -40,6 +41,8 @@ type LDAPInterface struct {
 	// first-class group entry on the LDAP server
 	groupQuery ldaputil.LDAPQueryOnAttribute
 	// GroupNameAttributes defines which attributes on an LDAP group entry will be interpreted as its unique identifier
+	groupUIDAttributes []string
+	// groupNameAttributes defines which attributes on an LDAP group entry will be interpreted as its name to use for an OpenShift group
 	groupNameAttributes []string
 	// groupMembershipAttributes defines which attributes on an LDAP group entry will be interpreted as its members
 	groupMembershipAttributes []string
@@ -102,7 +105,8 @@ func (e *LDAPInterface) GroupEntryFor(ldapGroupUID string) (group *ldap.Entry, e
 // queryForGroup queries for a specific group identified by a ldapGroupUID with the query config stored
 // in a LDAPInterface
 func (e *LDAPInterface) queryForGroup(ldapGroupUID string) (group *ldap.Entry, err error) {
-	allAttributes := sets.NewString(e.groupNameAttributes...)
+	allAttributes := sets.NewString(e.groupUIDAttributes...)
+	allAttributes.Insert(e.groupNameAttributes...) // these attributes will be used for a future openshift group name mapping
 	allAttributes.Insert(e.groupMembershipAttributes...)
 
 	// create the search request
@@ -151,7 +155,7 @@ func (e *LDAPInterface) ListGroups() (ldapGroupUIDs []string, err error) {
 	}
 	for _, group := range groups {
 		// cache groups returned from the server for later
-		ldapGroupUID := ldaputil.GetAttributeValue(group, e.groupNameAttributes)
+		ldapGroupUID := ldaputil.GetAttributeValue(group, e.groupUIDAttributes)
 		e.cachedGroups[ldapGroupUID] = group
 		ldapGroupUIDs = append(ldapGroupUIDs, ldapGroupUID)
 	}
