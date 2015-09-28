@@ -33,7 +33,7 @@ function join { local IFS="$1"; shift; echo "$*"; }
 function cleanup()
 {
 	out=$?
-#	cleanup_openshift
+	cleanup_openshift
 	echo "[INFO] Exiting"
 	exit $out
 }
@@ -70,7 +70,9 @@ wait_for_command "oc get pods -l deploymentconfig=openldap-server | grep -i Runn
 LDAP_SERVICE_IP=$(oc get --output-version=v1beta3 --template="{{ .spec.portalIP }}" service openldap-server)
 
 
+oc login -u system:admin
+
 echo "[INFO] Running extended tests"
 
 # Run the tests
-LDAP_IP=${LDAP_SERVICE_IP} TMPDIR=${BASETMPDIR} ginkgo -progress -stream -v -focus="authentication: OpenLDAP" ${OS_OUTPUT_BINPATH}/extended.test
+#LDAP_IP=${LDAP_SERVICE_IP} TMPDIR=${BASETMPDIR} ginkgo -progress -stream -v -focus="authentication: OpenLDAP" ${OS_OUTPUT_BINPATH}/extended.test

@@ -274,7 +274,7 @@ func makeGroups(host string, which []string) []userapi.Group {
 func makeConfig(host string) configapi.LDAPSyncConfig {
 	// hard-coded config until config-file parsing is hashed out
 	return configapi.LDAPSyncConfig{
-		Host:         "ldap://" + host + "/",
+		URL:          "ldap://" + host + "/",
 		BindDN:       "",
 		BindPassword: "",
 		Insecure:     true,
@@ -282,28 +282,26 @@ func makeConfig(host string) configapi.LDAPSyncConfig {
 
 		LDAPGroupUIDToOpenShiftGroupNameMapping: make(map[string]string),
 
-		LDAPSchemaSpecificConfig: configapi.LDAPSchemaSpecificConfig{
-			RFC2307Config: &configapi.RFC2307Config{
-				GroupQuery: configapi.LDAPQuery{
-					BaseDN:         GroupBaseDN,
-					Scope:          LDAPScopeWholeSubtree,
-					DerefAliases:   LDAPNeverDerefAliases,
-					TimeLimit:      LDAPQueryTimeout,
-					Filter:         GroupFilter,
-					QueryAttribute: GroupQueryAttribute,
-				},
-				GroupNameAttributes:       []string{GroupNameAttribute1, GroupNameAttribute2},
-				GroupMembershipAttributes: []string{GroupMembershipAttribute},
-				UserQuery: configapi.LDAPQuery{
-					BaseDN:         UserBaseDN,
-					Scope:          LDAPScopeWholeSubtree,
-					DerefAliases:   LDAPNeverDerefAliases,
-					TimeLimit:      LDAPQueryTimeout,
-					Filter:         UserFilter,
-					QueryAttribute: UserQueryAttribute,
-				},
-				UserNameAttributes: []string{UserNameAttribute1, UserNameAttribute2, UserNameAttribute3},
+		RFC2307Config: &configapi.RFC2307Config{
+			GroupQuery: configapi.LDAPQuery{
+				BaseDN:         GroupBaseDN,
+				Scope:          LDAPScopeWholeSubtree,
+				DerefAliases:   LDAPNeverDerefAliases,
+				TimeLimit:      LDAPQueryTimeout,
+				Filter:         GroupFilter,
+				QueryAttribute: GroupQueryAttribute,
 			},
+			GroupNameAttributes:       []string{GroupNameAttribute1, GroupNameAttribute2},
+			GroupMembershipAttributes: []string{GroupMembershipAttribute},
+			UserQuery: configapi.LDAPQuery{
+				BaseDN:         UserBaseDN,
+				Scope:          LDAPScopeWholeSubtree,
+				DerefAliases:   LDAPNeverDerefAliases,
+				TimeLimit:      LDAPQueryTimeout,
+				Filter:         UserFilter,
+				QueryAttribute: UserQueryAttribute,
+			},
+			UserNameAttributes: []string{UserNameAttribute1, UserNameAttribute2, UserNameAttribute3},
 		},
 	}
 }
