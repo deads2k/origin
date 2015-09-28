@@ -1,6 +1,7 @@
 package syncgroups
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -249,6 +250,10 @@ func (o *SyncGroupsOptions) Run() error {
 		SyncExisting: o.SyncExisting,
 	}
 
+	if len(o.Config.LDAPGroupUIDToOpenShiftGroupNameMapping) > 0 {
+		syncer.GroupNameMapper = NewUserDefinedGroupNameMapper(o.Config.LDAPGroupUIDToOpenShiftGroupNameMapping)
+	}
+
 	switch {
 	case o.Config.RFC2307Config != nil:
 		syncer.UserNameMapper = NewUserNameMapper(o.Config.RFC2307Config.UserNameAttributes)
@@ -277,9 +282,12 @@ func (o *SyncGroupsOptions) Run() error {
 
 		// In order to build the GroupNameMapper, we need to know if the user defined a hard mapping
 		// or one based on LDAP group entry attributes
-		syncer.GroupNameMapper = getGroupNameMapper(o.Config.LDAPGroupUIDToOpenShiftGroupNameMapping,
-			o.Config.RFC2307Config.GroupNameAttributes,
-			&ldapInterface)
+		if syncer.GroupNameMapper == nil {
+			if o.Config.RFC2307Config.GroupNameAttributes == nil {
+				return errors.New("not enough information to build a group name mapper")
+			}
+			syncer.GroupNameMapper = NewEntryAttributeGroupNameMapper(o.Config.RFC2307Config.GroupNameAttributes, &ldapInterface)
+		}
 
 		// In order to build the groupLister, we need to know about the group sync scope and source:
 		syncer.GroupLister = getGroupLister(o.Scope,
@@ -300,18 +308,6 @@ func (o *SyncGroupsOptions) Run() error {
 	// Now we run the Syncer and report any errors
 	syncErrors := syncer.Sync()
 	return kerrs.NewAggregate(syncErrors)
-}
-
-// getGroupNameMapper returns an LDAPGroupNameMapper either by using a user-provided mapping or
-// by creating a mapper that uses an algorithmic mapping
-func getGroupNameMapper(userDefinedMapping map[string]string,
-	groupNameAttribute []string,
-	groupGetter interfaces.LDAPGroupGetter) interfaces.LDAPGroupNameMapper {
-	if len(userDefinedMapping) > 0 {
-		return NewUserDefinedGroupNameMapper(userDefinedMapping)
-	} else {
-		return NewEntryAttributeGroupNameMapper(groupNameAttribute, groupGetter)
-	}
 }
 
 // getGroupLister returns an LDAPGroupLister. The GroupLister is created by taking into account

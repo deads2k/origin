@@ -39,10 +39,9 @@ type LDAPInterface struct {
 	// groupQuery holds the information necessary to make an LDAP query for a specific
 	// first-class group entry on the LDAP server
 	groupQuery ldaputil.LDAPQueryOnAttribute
-	// GroupNameAttributes defines which attributes on an LDAP group entry will be interpreted as its' name
+	// GroupNameAttributes defines which attributes on an LDAP group entry will be interpreted as its unique identifier
 	groupNameAttributes []string
-	// groupMembershipAttributes defines which attributes on an LDAP group entry will be interpreted
-	// as its' members
+	// groupMembershipAttributes defines which attributes on an LDAP group entry will be interpreted as its members
 	groupMembershipAttributes []string
 
 	// userQuery holds the information necessary to make an LDAP query for a specific
