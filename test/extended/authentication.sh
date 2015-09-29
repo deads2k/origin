@@ -65,7 +65,7 @@ sleep 5
 oc start-build openldap --follow
 
 # wait for the deployment to be up and running
-wait_for_command "oc get pods -l deploymentconfig=openldap-server | grep -i Running" $((60*TIME_SEC))
+wait_for_command 'oc get pods -l deploymentconfig=openldap-server --template="{{with \$items := .items}}{{with \$item := index \$items 0}}{{\$item.status.phase}}{{end}}{{end}}" | grep Running' $((60*TIME_SEC))
 
 LDAP_SERVICE_IP=$(oc get --output-version=v1beta3 --template="{{ .spec.portalIP }}" service openldap-server)
 
