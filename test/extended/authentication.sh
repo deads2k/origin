@@ -59,7 +59,8 @@ oc new-project openldap
 # create all the resources we need
 oc create -f test/extended/fixtures/ldap
 
-sleep 5
+# wait until the last event that occured on the imagestream was the successful pull of the latest image
+wait_for_command 'oc get imagestream openldap --template="{{with \$tags := .status.tags}}{{with \$event := index \$tags 0}}{{\$event.tag}}{{end}}{{end}}" | grep latest' $((60*TIME_SEC))
 
 # kick off a build and wait for it to finish
 oc start-build openldap --follow
