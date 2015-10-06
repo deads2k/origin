@@ -164,7 +164,13 @@ func (c *AssetConfig) addHandlers(mux *http.ServeMux) error {
 	versions := sets.NewString()
 	versions.Insert(latest.Versions...)
 	versions.Insert(klatest.VersionsForLegacyGroup()...)
+	deadVersions := sets.NewString()
+	deadVersions.Insert(configapi.DeadKubernetesAPILevels...)
+	deadVersions.Insert(configapi.DeadOpenShiftAPILevels...)
 	for _, version := range versions.List() {
+		if deadVersions.Has(version) {
+			continue
+		}
 		for kind, t := range api.Scheme.KnownTypes(version) {
 			if strings.Contains(t.PkgPath(), "kubernetes/pkg/expapi") {
 				continue

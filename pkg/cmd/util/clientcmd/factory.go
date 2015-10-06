@@ -55,6 +55,7 @@ func NewFactory(clientConfig kclientcmd.ClientConfig) *Factory {
 
 	clients := &clientCache{
 		clients: make(map[string]*client.Client),
+		configs: make(map[string]*kclient.Config),
 		loader:  clientConfig,
 	}
 
@@ -71,7 +72,9 @@ func NewFactory(clientConfig kclientcmd.ClientConfig) *Factory {
 	}
 
 	w.Object = func() (meta.RESTMapper, runtime.ObjectTyper) {
-		if cfg, err := clientConfig.ClientConfig(); err == nil {
+		// Output using whatever version was negotiated in the client cache. The
+		// version we decode with may not be the same as what the server requires.
+		if cfg, err := clients.ClientConfigForVersion(""); err == nil {
 			return kubectl.OutputVersionMapper{RESTMapper: mapper, OutputVersion: cfg.Version}, api.Scheme
 		}
 		return mapper, api.Scheme
@@ -259,12 +262,14 @@ func expandResourceShortcut(resource string) string {
 	return resource
 }
 
-// clientCache caches previously loaded clients for reuse, and ensures MatchServerVersion
-// is invoked only once
+// clientCache caches previously loaded clients for reuse. This is largely
+// copied from upstream (because of typing) but reuses the negotiation logic.
 type clientCache struct {
 	loader        kclientcmd.ClientConfig
 	clients       map[string]*client.Client
+	configs       map[string]*kclient.Config
 	defaultConfig *kclient.Config
+	defaultClient *kclient.Client
 }
 
 // ClientConfigForVersion returns the correct config for a server
@@ -274,14 +279,37 @@ func (c *clientCache) ClientConfigForVersion(version string) (*kclient.Config, e
 		if err != nil {
 			return nil, err
 		}
+		// TODO: We want to reuse the ustream negotiation logic, which is coupled
+		// to a concrete kube Client. The negotiation will ultimately try and
+		// build an unversioned URL using the config prefix to ask for supported
+		// server versions. If we use the default kube client config, the prefix
+		// will be /api, while we need to use the OpenShift prefix to ask for the
+		// OpenShift server versions. For now, set OpenShift defaults on the
+		// config to ensure the right prefix gets used. The client cache and
+		// negotiation logic should be refactored upstream to support downstream
+		// reuse so that we don't need to do any of this cache or negotiation
+		// duplication.
+		client.SetOpenShiftDefaults(config)
 		c.defaultConfig = config
+		defaultClient, err := kclient.New(config)
+		if err != nil {
+			return nil, err
+		}
+		c.defaultClient = defaultClient
+	}
+	// TODO: have a better config copy method
+	if config, ok := c.configs[version]; ok {
+		return config, nil
 	}
 	// TODO: have a better config copy method
 	config := *c.defaultConfig
-	if len(version) != 0 {
-		config.Version = version
+	negotiatedVersion, err := kclient.NegotiateVersion(c.defaultClient, &config, version, latest.Versions)
+	if err != nil {
+		return nil, err
 	}
+	config.Version = negotiatedVersion
 	client.SetOpenShiftDefaults(&config)
+	c.configs[version] = &config
 
 	return &config, nil
 }
@@ -289,15 +317,13 @@ func (c *clientCache) ClientConfigForVersion(version string) (*kclient.Config, e
 // ClientForVersion initializes or reuses a client for the specified version, or returns an
 // error if that is not possible
 func (c *clientCache) ClientForVersion(version string) (*client.Client, error) {
+	if client, ok := c.clients[version]; ok {
+		return client, nil
+	}
 	config, err := c.ClientConfigForVersion(version)
 	if err != nil {
 		return nil, err
 	}
-
-	if client, ok := c.clients[config.Version]; ok {
-		return client, nil
-	}
-
 	client, err := client.New(config)
 	if err != nil {
 		return nil, err
