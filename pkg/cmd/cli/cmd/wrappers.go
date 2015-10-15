@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	kcmd "k8s.io/kubernetes/pkg/kubectl/cmd"
-	kutil "k8s.io/kubernetes/pkg/util"
+	kvalidation "k8s.io/kubernetes/pkg/util/validation"
 
 	"github.com/openshift/origin/pkg/cmd/cli/describe"
 	"github.com/openshift/origin/pkg/cmd/util/clientcmd"
@@ -427,7 +427,7 @@ resource-version will be used.`
 // NewCmdLabel is a wrapper for the Kubernetes cli label command
 func NewCmdLabel(fullName string, f *clientcmd.Factory, out io.Writer) *cobra.Command {
 	cmd := kcmd.NewCmdLabel(f.Factory, out)
-	cmd.Long = fmt.Sprintf(labelLong, kutil.LabelValueMaxLength)
+	cmd.Long = fmt.Sprintf(labelLong, kvalidation.LabelValueMaxLength)
 	cmd.Example = fmt.Sprintf(labelExample, fullName)
 	return cmd
 }
