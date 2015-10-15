@@ -432,7 +432,12 @@ func (o CreateNodeConfigOptions) MakeNodeJSON(nodeJSONFile string) error {
 	node := &kapi.Node{}
 	node.Name = o.NodeName
 
-	json, err := klatest.Codec.Encode(node)
+	kubeAPIGroup, err := klatest.Group("")
+	if err != nil {
+		return err
+	}
+
+	json, err := kubeAPIGroup.Codec.Encode(node)
 	if err != nil {
 		return err
 	}
