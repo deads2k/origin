@@ -188,3 +188,23 @@ func DefaultVersionFor(group string) (string, error) {
 
 	return kubeAPIGroup.Version, nil
 }
+
+func InterfacesForLegacyGroup(version string) (*meta.VersionInterfaces, error) {
+	return GroupOrDie("").InterfacesFor(version)
+}
+
+func CodecForLegacyGroup() runtime.Codec {
+	return GroupOrDie("").Codec
+}
+
+func RESTMapperForLegacyGroup() meta.RESTMapper {
+	return GroupOrDie("").RESTMapper
+}
+
+func DefaultVersionForLegacyGroup() string {
+	return GroupOrDie("").Version
+}
+
+func VersionsForLegacyGroup() []string {
+	return GroupOrDie("").Versions
+}
