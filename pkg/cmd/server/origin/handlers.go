@@ -94,7 +94,7 @@ func (c *MasterConfig) authorizationFilter(handler http.Handler) http.Handler {
 func forbidden(reason string, attributes authorizer.AuthorizationAttributes, w http.ResponseWriter, req *http.Request) {
 	kind := ""
 	name := ""
-	apiVersion := klatest.Version
+	apiVersion := klatest.VersionForLegacyGroup()
 	// the attributes can be empty for two basic reasons:
 	// 1. malformed API request
 	// 2. not an API request at all
@@ -114,7 +114,7 @@ func forbidden(reason string, attributes authorizer.AuthorizationAttributes, w h
 
 	// Not all API versions in valid API requests will have a matching codec in kubernetes.  If we can't find one,
 	// just default to the latest kube codec.
-	codec := klatest.Codec
+	codec := klatest.CodecForLegacyGroup()
 	if requestedCodec, err := klatest.InterfacesFor(apiVersion); err == nil {
 		codec = requestedCodec
 	}
