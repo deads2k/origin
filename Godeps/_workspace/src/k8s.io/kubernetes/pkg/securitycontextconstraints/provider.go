@@ -177,12 +177,12 @@ func (s *simpleProvider) ValidateSecurityContext(pod *api.Pod, container *api.Co
 		}
 	}
 
-	if !s.scc.AllowHostPID && pod.Spec.HostPID {
-		allErrs = append(allErrs, fielderrors.NewFieldInvalid("hostPID", pod.Spec.HostPID, "Host PID is not allowed to be used"))
+	if !s.scc.AllowHostPID && pod.Spec.SecurityContext.HostPID {
+		allErrs = append(allErrs, fielderrors.NewFieldInvalid("hostPID", pod.Spec.SecurityContext.HostPID, "Host PID is not allowed to be used"))
 	}
 
-	if !s.scc.AllowHostIPC && pod.Spec.HostIPC {
-		allErrs = append(allErrs, fielderrors.NewFieldInvalid("hostIPC", pod.Spec.HostIPC, "Host IPC is not allowed to be used"))
+	if !s.scc.AllowHostIPC && pod.Spec.SecurityContext.HostIPC {
+		allErrs = append(allErrs, fielderrors.NewFieldInvalid("hostIPC", pod.Spec.SecurityContext.HostIPC, "Host IPC is not allowed to be used"))
 	}
 
 	return allErrs
