@@ -464,7 +464,7 @@ func ValidateRoutingConfig(config api.RoutingConfig) fielderrors.ValidationError
 
 	if len(config.Subdomain) == 0 {
 		allErrs = append(allErrs, fielderrors.NewFieldRequired("subdomain"))
-	} else if !util.IsDNS1123Subdomain(config.Subdomain) {
+	} else if !kvalidation.IsDNS1123Subdomain(config.Subdomain) {
 		allErrs = append(allErrs, fielderrors.NewFieldInvalid("subdomain", config.Subdomain, "must be a valid subdomain"))
 	}
 

@@ -47,7 +47,7 @@ func exportObjectMeta(objMeta *kapi.ObjectMeta, exact bool) {
 	if !exact {
 		objMeta.Namespace = ""
 	}
-	objMeta.CreationTimestamp = util.Time{}
+	objMeta.CreationTimestamp = unversioned.Time{}
 	objMeta.DeletionTimestamp = nil
 	objMeta.ResourceVersion = ""
 	objMeta.SelfLink = ""

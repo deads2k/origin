@@ -21,6 +21,7 @@ import (
 
 	"k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/api/rest"
+	"k8s.io/kubernetes/pkg/api/unversioned"
 	"k8s.io/kubernetes/pkg/runtime"
 )
 
@@ -68,7 +69,7 @@ func NewHTTPWebHook(handler http.Handler, allowGet bool) *WebHook {
 
 // New() responds with the status object.
 func (h *WebHook) New() runtime.Object {
-	return &api.Status{}
+	return &unversioned.Status{}
 }
 
 // Connect responds to connections with a ConnectHandler

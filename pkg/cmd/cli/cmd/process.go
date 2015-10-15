@@ -129,7 +129,7 @@ func RunProcess(f *clientcmd.Factory, out io.Writer, cmd *cobra.Command, args []
 			}
 			return err
 		}
-		templateObj.CreationTimestamp = util.Now()
+		templateObj.CreationTimestamp = unversioned.Now()
 		infos = append(infos, &resource.Info{Object: templateObj})
 	} else {
 		infos, err = resource.NewBuilder(mapper, typer, f.ClientMapperForCommand()).
@@ -231,7 +231,7 @@ func RunProcess(f *clientcmd.Factory, out io.Writer, cmd *cobra.Command, args []
 	}
 
 	return p.PrintObj(&kapi.List{
-		ListMeta: kapi.ListMeta{},
+		ListMeta: unversioned.ListMeta{},
 		Items:    objects,
 	}, out)
 }

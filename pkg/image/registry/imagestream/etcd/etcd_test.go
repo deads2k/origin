@@ -515,11 +515,11 @@ func TestDeleteImageStream(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected non-nil error: %#v", err)
 	}
-	status, ok := obj.(*kapi.Status)
+	status, ok := obj.(*unversioned.Status)
 	if !ok {
 		t.Fatalf("Expected status, got %#v", obj)
 	}
-	if status.Status != kapi.StatusSuccess {
+	if status.Status != unversioned.StatusSuccess {
 		t.Errorf("Expected status=success, got %#v", status)
 	}
 }

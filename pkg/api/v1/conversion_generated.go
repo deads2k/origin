@@ -24,6 +24,7 @@ import (
 	userapiv1 "github.com/openshift/origin/pkg/user/api/v1"
 	pkgapi "k8s.io/kubernetes/pkg/api"
 	resource "k8s.io/kubernetes/pkg/api/resource"
+	"k8s.io/kubernetes/pkg/api/unversioned"
 	pkgapiv1 "k8s.io/kubernetes/pkg/api/v1"
 	conversion "k8s.io/kubernetes/pkg/conversion"
 	reflect "reflect"
@@ -3031,9 +3032,9 @@ func convert_api_EnvVarSource_To_v1_EnvVarSource(in *pkgapi.EnvVarSource, out *p
 	return nil
 }
 
-func convert_api_ListMeta_To_v1_ListMeta(in *pkgapi.ListMeta, out *pkgapiv1.ListMeta, s conversion.Scope) error {
+func convert_api_ListMeta_To_v1_ListMeta(in *unversioned.ListMeta, out *unversioned.ListMeta, s conversion.Scope) error {
 	if defaulting, found := s.DefaultingInterface(reflect.TypeOf(*in)); found {
-		defaulting.(func(*pkgapi.ListMeta))(in)
+		defaulting.(func(*unversioned.ListMeta))(in)
 	}
 	out.SelfLink = in.SelfLink
 	out.ResourceVersion = in.ResourceVersion
@@ -3148,9 +3149,9 @@ func convert_api_ResourceRequirements_To_v1_ResourceRequirements(in *pkgapi.Reso
 	return nil
 }
 
-func convert_api_TypeMeta_To_v1_TypeMeta(in *pkgapi.TypeMeta, out *pkgapiv1.TypeMeta, s conversion.Scope) error {
+func convert_api_TypeMeta_To_v1_TypeMeta(in *unversioned.TypeMeta, out *unversioned.TypeMeta, s conversion.Scope) error {
 	if defaulting, found := s.DefaultingInterface(reflect.TypeOf(*in)); found {
-		defaulting.(func(*pkgapi.TypeMeta))(in)
+		defaulting.(func(*unversioned.TypeMeta))(in)
 	}
 	out.Kind = in.Kind
 	out.APIVersion = in.APIVersion
@@ -3189,9 +3190,9 @@ func convert_v1_EnvVarSource_To_api_EnvVarSource(in *pkgapiv1.EnvVarSource, out 
 	return nil
 }
 
-func convert_v1_ListMeta_To_api_ListMeta(in *pkgapiv1.ListMeta, out *pkgapi.ListMeta, s conversion.Scope) error {
+func convert_v1_ListMeta_To_api_ListMeta(in *unversioned.ListMeta, out *unversioned.ListMeta, s conversion.Scope) error {
 	if defaulting, found := s.DefaultingInterface(reflect.TypeOf(*in)); found {
-		defaulting.(func(*pkgapiv1.ListMeta))(in)
+		defaulting.(func(*unversioned.ListMeta))(in)
 	}
 	out.SelfLink = in.SelfLink
 	out.ResourceVersion = in.ResourceVersion
@@ -3306,9 +3307,9 @@ func convert_v1_ResourceRequirements_To_api_ResourceRequirements(in *pkgapiv1.Re
 	return nil
 }
 
-func convert_v1_TypeMeta_To_api_TypeMeta(in *pkgapiv1.TypeMeta, out *pkgapi.TypeMeta, s conversion.Scope) error {
+func convert_v1_TypeMeta_To_api_TypeMeta(in *unversioned.TypeMeta, out *unversioned.TypeMeta, s conversion.Scope) error {
 	if defaulting, found := s.DefaultingInterface(reflect.TypeOf(*in)); found {
-		defaulting.(func(*pkgapiv1.TypeMeta))(in)
+		defaulting.(func(*unversioned.TypeMeta))(in)
 	}
 	out.Kind = in.Kind
 	out.APIVersion = in.APIVersion
