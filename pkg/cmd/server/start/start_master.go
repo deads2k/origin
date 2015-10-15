@@ -18,7 +18,7 @@ import (
 	kerrors "k8s.io/kubernetes/pkg/api/errors"
 	"k8s.io/kubernetes/pkg/capabilities"
 	kcmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
-	"k8s.io/kubernetes/pkg/kubelet"
+	// "k8s.io/kubernetes/pkg/kubelet"
 	"k8s.io/kubernetes/pkg/util/sets"
 
 	"github.com/openshift/origin/pkg/cmd/server/admin"
@@ -366,11 +366,11 @@ func (m *Master) Start() error {
 	// Allow privileged containers
 	// TODO: make this configurable and not the default https://github.com/openshift/origin/issues/662
 	capabilities.Initialize(capabilities.Capabilities{
-		AllowPrivileged: true,
+		AllowPrivileged:   true,
 		PrivilegedSources: capabilities.PrivilegedSources{
-			HostNetworkSources: []string{kubelet.ApiserverSource, kubelet.FileSource},
-			HostPIDSources:     []string{kubelet.ApiserverSource, kubelet.FileSource},
-			HostIPCSources:     []string{kubelet.ApiserverSource, kubelet.FileSource},
+		// HostNetworkSources: []string{kubelet.ApiserverSource, kubelet.FileSource},
+		// HostPIDSources:     []string{kubelet.ApiserverSource, kubelet.FileSource},
+		// HostIPCSources:     []string{kubelet.ApiserverSource, kubelet.FileSource},
 		},
 	})
 
