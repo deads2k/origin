@@ -398,7 +398,7 @@ func (oi *OsdnRegistryInterface) GetServices() ([]osdnapi.Service, string, error
 }
 
 func (oi *OsdnRegistryInterface) getServices(namespace string) ([]osdnapi.Service, string, error) {
-	kServList, err := oi.kClient.Services(namespace).List(labels.Everything())
+	kServList, err := oi.kClient.Services(namespace).List(labels.Everything(), fields.Everything())
 	if err != nil {
 		return nil, "", err
 	}
@@ -499,7 +499,7 @@ func (oi *OsdnRegistryInterface) runEventQueue(resourceName string) (*oscache.Ev
 	case "service":
 		expectedType = &kapi.Service{}
 		lw.ListFunc = func() (runtime.Object, error) {
-			return oi.kClient.Services(kapi.NamespaceAll).List(labels.Everything())
+			return oi.kClient.Services(kapi.NamespaceAll).List(labels.Everything(), fields.Everything())
 		}
 		lw.WatchFunc = func(resourceVersion string) (watch.Interface, error) {
 			return oi.kClient.Services(kapi.NamespaceAll).Watch(labels.Everything(), fields.Everything(), resourceVersion)
