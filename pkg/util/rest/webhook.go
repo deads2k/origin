@@ -73,7 +73,7 @@ func (h *WebHook) New() runtime.Object {
 }
 
 // Connect responds to connections with a ConnectHandler
-func (h *WebHook) Connect(ctx api.Context, name string, options runtime.Object) (rest.ConnectHandler, error) {
+func (h *WebHook) Connect(ctx api.Context, name string, options runtime.Object, r rest.Responder) (http.Handler, error) {
 	return &WebHookHandler{
 		handler: h.h,
 		ctx:     ctx,
@@ -104,7 +104,7 @@ type WebHookHandler struct {
 	err     error
 }
 
-var _ rest.ConnectHandler = &WebHookHandler{}
+var _ http.Handler = &WebHookHandler{}
 
 func (h *WebHookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.err = h.handler.ServeHTTP(w, r, h.ctx, h.name, h.options.Path)
