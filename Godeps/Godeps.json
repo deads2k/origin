@@ -117,10 +117,6 @@
 			"Rev": "f8202bc903bda493ebba4aa54922d78430c2c42f"
 		},
 		{
-			"ImportPath": "github.com/bradfitz/http2/hpack",
-			"Rev": "f8202bc903bda493ebba4aa54922d78430c2c42f"
-		},
-		{
 			"ImportPath": "github.com/coreos/etcd/client",
 			"Comment": "v2.1.2",
 			"Rev": "ff8d1ecb9f2bf966c0e6929156be4432786b9217"
@@ -285,10 +281,6 @@
 			"Rev": "97e243d21a8e232e9d8af38ba2366dfcfceebeba"
 		},
 		{
-			"ImportPath": "github.com/coreos/go-systemd/journal",
-			"Comment": "v2-27-g97e243d",
-			"Rev": "97e243d21a8e232e9d8af38ba2366dfcfceebeba"
-		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/unit",
 			"Comment": "v2-27-g97e243d",
