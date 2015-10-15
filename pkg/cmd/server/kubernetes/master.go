@@ -45,9 +45,6 @@ func (c *MasterConfig) InstallAPI(container *restful.Container) []string {
 	_ = master.New(c.Master)
 
 	messages := []string{}
-	if c.Master.EnableV1Beta3 {
-		messages = append(messages, fmt.Sprintf("Started Kubernetes API at %%s%s (deprecated)", KubeAPIPrefixV1Beta3))
-	}
 	if !c.Master.DisableV1 {
 		messages = append(messages, fmt.Sprintf("Started Kubernetes API at %%s%s", KubeAPIPrefixV1))
 	}
@@ -58,7 +55,7 @@ func (c *MasterConfig) InstallAPI(container *restful.Container) []string {
 // RunNamespaceController starts the Kubernetes Namespace Manager
 func (c *MasterConfig) RunNamespaceController() {
 	// TODO: Add OR c.ControllerManager.EnableDeploymentController once we have upstream deployments
-	experimentalMode := c.ControllerManager.EnableHorizontalPodAutoscaler
+	experimentalMode := c.ControllerManager.EnableExperimental
 	namespaceController := namespacecontroller.NewNamespaceController(c.KubeClient, experimentalMode, c.ControllerManager.NamespaceSyncPeriod)
 	namespaceController.Run()
 }
