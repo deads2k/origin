@@ -12,6 +12,7 @@ import (
 
 	kapi "k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/api/meta"
+	"k8s.io/kubernetes/pkg/api/unversioned"
 	"k8s.io/kubernetes/pkg/client/cache"
 	kclient "k8s.io/kubernetes/pkg/client/unversioned"
 	"k8s.io/kubernetes/pkg/fields"
@@ -84,7 +85,7 @@ func (oi *OsdnRegistryInterface) DeleteSubnet(nodeName string) error {
 
 func (oi *OsdnRegistryInterface) CreateSubnet(nodeName string, sub *osdnapi.Subnet) error {
 	hs := &api.HostSubnet{
-		TypeMeta:   kapi.TypeMeta{Kind: "HostSubnet"},
+		TypeMeta:   unversioned.TypeMeta{Kind: "HostSubnet"},
 		ObjectMeta: kapi.ObjectMeta{Name: nodeName},
 		Host:       nodeName,
 		HostIP:     sub.NodeIP,
@@ -277,7 +278,7 @@ func (oi *OsdnRegistryInterface) WriteNetworkConfig(network string, subnetLength
 		}
 	}
 	cn = &api.ClusterNetwork{
-		TypeMeta:         kapi.TypeMeta{Kind: "ClusterNetwork"},
+		TypeMeta:         unversioned.TypeMeta{Kind: "ClusterNetwork"},
 		ObjectMeta:       kapi.ObjectMeta{Name: "default"},
 		Network:          network,
 		HostSubnetLength: int(subnetLength),
@@ -374,7 +375,7 @@ func (oi *OsdnRegistryInterface) GetNetNamespace(name string) (osdnapi.NetNamesp
 
 func (oi *OsdnRegistryInterface) WriteNetNamespace(name string, id uint) error {
 	netns := &api.NetNamespace{
-		TypeMeta:   kapi.TypeMeta{Kind: "NetNamespace"},
+		TypeMeta:   unversioned.TypeMeta{Kind: "NetNamespace"},
 		ObjectMeta: kapi.ObjectMeta{Name: name},
 		NetName:    name,
 		NetID:      id,
