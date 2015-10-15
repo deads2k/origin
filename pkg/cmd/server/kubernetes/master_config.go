@@ -51,7 +51,7 @@ func BuildKubernetesMasterConfig(options configapi.MasterConfig, requestContextM
 	if err != nil {
 		return nil, err
 	}
-	databaseStorage, err := master.NewEtcdStorage(etcdClient, kapilatest.InterfacesFor, options.EtcdStorageConfig.KubernetesStorageVersion, options.EtcdStorageConfig.KubernetesStoragePrefix)
+	databaseStorage, err := master.NewEtcdStorage(etcdClient, kapilatest.InterfacesForLegacyGroup, options.EtcdStorageConfig.KubernetesStorageVersion, options.EtcdStorageConfig.KubernetesStoragePrefix)
 	if err != nil {
 		return nil, fmt.Errorf("Error setting up Kubernetes server storage: %v", err)
 	}
@@ -143,12 +143,14 @@ func BuildKubernetesMasterConfig(options configapi.MasterConfig, requestContextM
 		proxyClientCerts = append(proxyClientCerts, clientCert)
 	}
 
+	storageDestinations := master.NewStorageDestinations()
+	storageDestinations.AddAPIGroup("", databaseStorage)
+
 	m := &master.Config{
 		PublicAddress: net.ParseIP(options.KubernetesMasterConfig.MasterIP),
 		ReadWritePort: port,
 
-		DatabaseStorage:    databaseStorage,
-		ExpDatabaseStorage: databaseStorage,
+		StorageDestinations: storageDestinations,
 
 		EventTTL: server.EventTTL,
 		//MinRequestTimeout: server.MinRequestTimeout,
