@@ -96,13 +96,13 @@ func (c *MasterConfig) RunPersistentVolumeClaimRecycler(recyclerImageName string
 
 // RunReplicationController starts the Kubernetes replication controller sync loop
 func (c *MasterConfig) RunReplicationController(client *client.Client) {
-	controllerManager := replicationcontroller.NewReplicationManager(client, replicationcontroller.BurstReplicas)
+	controllerManager := replicationcontroller.NewReplicationManager(client, c.ControllerManager.ResyncPeriod, replicationcontroller.BurstReplicas)
 	go controllerManager.Run(c.ControllerManager.ConcurrentRCSyncs, util.NeverStop)
 }
 
 // RunEndpointController starts the Kubernetes replication controller sync loop
 func (c *MasterConfig) RunEndpointController() {
-	endpoints := endpointcontroller.NewEndpointController(c.KubeClient)
+	endpoints := endpointcontroller.NewEndpointController(c.KubeClient, c.ControllerManager.ResyncPeriod)
 	go endpoints.Run(c.ControllerManager.ConcurrentEndpointSyncs, util.NeverStop)
 
 }
@@ -136,6 +136,7 @@ func (c *MasterConfig) RunNodeController() {
 		s.PodEvictionTimeout,
 
 		util.NewTokenBucketRateLimiter(s.DeletingPodsQps, s.DeletingPodsBurst),
+		util.NewTokenBucketRateLimiter(s.DeletingPodsQps, s.DeletingPodsBurst), // upstream uses the same ones too
 
 		s.NodeMonitorGracePeriod,
 		s.NodeStartupGracePeriod,
