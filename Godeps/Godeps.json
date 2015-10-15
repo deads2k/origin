@@ -55,13 +55,8 @@
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/aws",
-			"Comment": "v0.6.0-7-gcea3a42",
-			"Rev": "cea3a425fc2d887d102e406ec2f8b37a57abd82f"
-		},
-		{
-			"ImportPath": "github.com/aws/aws-sdk-go/internal/apierr",
-			"Comment": "v0.6.0-7-gcea3a42",
-			"Rev": "cea3a425fc2d887d102e406ec2f8b37a57abd82f"
+			"Comment": "v0.9.9",
+			"Rev": "c4ae871ffc03691a7b039fa751a1e7afee56e920"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/internal/endpoints",
@@ -280,7 +275,6 @@
 			"Comment": "v2-27-g97e243d",
 			"Rev": "97e243d21a8e232e9d8af38ba2366dfcfceebeba"
 		},
-		{
 		{
 			"ImportPath": "github.com/coreos/go-systemd/unit",
 			"Comment": "v2-27-g97e243d",
@@ -725,11 +719,14 @@
 			"Rev": "c795610ec6e479e5795f7852db65ea15073674a6"
 		},
 		{
+<<<<<<< HEAD
 			"ImportPath": "github.com/prometheus/client_golang/extraction",
 			"Comment": "0.4.0-1-g692492e",
 			"Rev": "692492e54b553a81013254cc1fba4b6dd76fad30"
 		},
 		{
+=======
+>>>>>>> 1fc1c38... fix godep.json parsing
 			"ImportPath": "github.com/prometheus/client_golang/prometheus",
 			"Comment": "0.7.0-39-g3b78d7a",
 			"Rev": "3b78d7a77f51ccbc364d4bc170920153022cfd08"
