@@ -6,6 +6,7 @@ import (
 	kapi "k8s.io/kubernetes/pkg/api"
 	kerrors "k8s.io/kubernetes/pkg/api/errors"
 	"k8s.io/kubernetes/pkg/api/rest"
+	"k8s.io/kubernetes/pkg/api/unversioned"
 	kclient "k8s.io/kubernetes/pkg/client/unversioned"
 	"k8s.io/kubernetes/pkg/fields"
 	"k8s.io/kubernetes/pkg/labels"
@@ -160,5 +161,5 @@ func (s *REST) Update(ctx kapi.Context, obj runtime.Object) (runtime.Object, boo
 
 // Delete deletes a Project specified by its name
 func (s *REST) Delete(ctx kapi.Context, name string) (runtime.Object, error) {
-	return &kapi.Status{Status: kapi.StatusSuccess}, s.client.Delete(name)
+	return &unversioned.Status{Status: unversioned.StatusSuccess}, s.client.Delete(name)
 }

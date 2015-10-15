@@ -67,7 +67,7 @@ func setup(t *testing.T) (*tools.FakeEtcdClient, kstorage.Interface, *REST) {
 }
 
 type statusError interface {
-	Status() kapi.Status
+	Status() unversioned.Status
 }
 
 func TestNameAndTag(t *testing.T) {
@@ -403,7 +403,7 @@ func TestDeleteImageStreamTag(t *testing.T) {
 		if obj == nil {
 			t.Fatalf("%s: unexpected nil response", name)
 		}
-		expectedStatus := &kapi.Status{Status: kapi.StatusSuccess}
+		expectedStatus := &unversioned.Status{Status: unversioned.StatusSuccess}
 		if e, a := expectedStatus, obj; !reflect.DeepEqual(e, a) {
 			t.Errorf("%s: expected %#v, got %#v", name, e, a)
 		}

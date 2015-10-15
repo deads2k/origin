@@ -121,7 +121,6 @@ func (o *OpenShiftLogsOptions) RunLog() error {
 		PodNamespace:  o.Namespace,
 		ContainerName: o.ContainerName,
 		Follow:        o.Follow,
-		Interactive:   o.Interactive,
 		Previous:      o.Previous,
 		Out:           o.Out,
 	}

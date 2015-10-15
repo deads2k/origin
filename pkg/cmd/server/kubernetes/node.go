@@ -140,7 +140,7 @@ func (c *NodeConfig) RunKubelet() {
 	c.KubeletConfig.RootDirectory = c.VolumeDir
 
 	// hook for overriding the cadvisor interface for integration tests
-	c.KubeletConfig.CadvisorInterface = defaultCadvisorInterface
+	c.KubeletConfig.CAdvisorInterface = defaultCadvisorInterface
 
 	go func() {
 		glog.Fatal(c.KubeletServer.Run(c.KubeletConfig))

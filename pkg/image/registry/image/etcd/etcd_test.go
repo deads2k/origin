@@ -368,11 +368,11 @@ func TestDelete(t *testing.T) {
 		t.Errorf("Unexpected non-nil error: %#v", err)
 	}
 
-	status, ok := obj.(*kapi.Status)
+	status, ok := obj.(*unversioned.Status)
 	if !ok {
 		t.Fatalf("Expected status type, got: %#v", obj)
 	}
-	if status.Status != kapi.StatusSuccess {
+	if status.Status != unversioned.StatusSuccess {
 		t.Errorf("Expected status=success, got: %#v", status)
 	}
 	if len(fakeEtcdClient.DeletedKeys) != 1 {
