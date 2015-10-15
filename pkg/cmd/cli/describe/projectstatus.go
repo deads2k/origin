@@ -723,7 +723,7 @@ type rcLoader struct {
 }
 
 func (l *rcLoader) Load() error {
-	list, err := l.lister.ReplicationControllers(l.namespace).List(labels.Everything())
+	list, err := l.lister.ReplicationControllers(l.namespace).List(labels.Everything(), fields.Everything())
 	if err != nil {
 		return err
 	}
@@ -747,7 +747,7 @@ type serviceLoader struct {
 }
 
 func (l *serviceLoader) Load() error {
-	list, err := l.lister.Services(l.namespace).List(labels.Everything())
+	list, err := l.lister.Services(l.namespace).List(labels.Everything(), fields.Everything())
 	if err != nil {
 		return err
 	}

@@ -595,12 +595,12 @@ func (d *ProjectDescriber) Describe(namespace, name string) (string, error) {
 		return "", err
 	}
 	resourceQuotasClient := d.kubeClient.ResourceQuotas(name)
-	resourceQuotaList, err := resourceQuotasClient.List(labels.Everything())
+	resourceQuotaList, err := resourceQuotasClient.List(labels.Everything(), fields.Everything())
 	if err != nil {
 		return "", err
 	}
 	limitRangesClient := d.kubeClient.LimitRanges(name)
-	limitRangeList, err := limitRangesClient.List(labels.Everything())
+	limitRangeList, err := limitRangesClient.List(labels.Everything(), fields.Everything())
 	if err != nil {
 		return "", err
 	}
