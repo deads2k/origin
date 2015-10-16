@@ -14,7 +14,7 @@ import (
 )
 
 // NewDeploymentConfigScaler returns a new scaler for deploymentConfigs
-func NewDeploymentConfigScaler(oc *client.Client, kc *kclient.Client) kubectl.Scaler {
+func NewDeploymentConfigScaler(oc client.Interface, kc kclient.Interface) kubectl.Scaler {
 	return &DeploymentConfigScaler{rcClient: kc, dcClient: oc, clientInterface: kc}
 }
 
