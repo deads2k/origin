@@ -80,7 +80,8 @@ KUBE_TIMEOUT=${KUBE_TIMEOUT:--timeout 60s}
 if [ "${1-}" != "" ]; then
   test_packages="$OS_GO_PACKAGE/$1"
 elif [ -n "$TEST_KUBE" ]; then
-  test_packages=`find_test_dirs; special_upstream_test_dirs; find_upstream_test_dirs`
+  test_packages=`find_test_dirs; special_upstream_test_dirs`
+  # test_packages=`find_test_dirs; special_upstream_test_dirs; find_upstream_test_dirs`
 else
   test_packages=`find_test_dirs; special_upstream_test_dirs`
 fi
