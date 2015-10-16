@@ -205,7 +205,7 @@ func TestGetImageStreamTag(t *testing.T) {
 		fakeEtcdClient, _, storage := setup(t)
 
 		if testCase.image != nil {
-			fakeEtcdClient.Data["/images/"+testCase.image.Name] = tools.EtcdResponseWithError{
+			fakeEtcdClient.Data["/registry/images/"+testCase.image.Name] = tools.EtcdResponseWithError{
 				R: &etcd.Response{
 					Node: &etcd.Node{
 						Value:         runtime.EncodeOrDie(latest.Codec, testCase.image),
@@ -214,7 +214,7 @@ func TestGetImageStreamTag(t *testing.T) {
 				},
 			}
 		} else {
-			fakeEtcdClient.Data["/images/10"] = tools.EtcdResponseWithError{
+			fakeEtcdClient.Data["/registry/images/10"] = tools.EtcdResponseWithError{
 				R: &etcd.Response{
 					Node: nil,
 				},
@@ -223,7 +223,7 @@ func TestGetImageStreamTag(t *testing.T) {
 		}
 
 		if testCase.repo != nil {
-			fakeEtcdClient.Data["/imagestreams/default/test"] = tools.EtcdResponseWithError{
+			fakeEtcdClient.Data["/registry/imagestreams/default/test"] = tools.EtcdResponseWithError{
 				R: &etcd.Response{
 					Node: &etcd.Node{
 						Value:         runtime.EncodeOrDie(latest.Codec, testCase.repo),
@@ -232,7 +232,7 @@ func TestGetImageStreamTag(t *testing.T) {
 				},
 			}
 		} else {
-			fakeEtcdClient.Data["/imagestreams/default/test"] = tools.EtcdResponseWithError{
+			fakeEtcdClient.Data["/registry/imagestreams/default/test"] = tools.EtcdResponseWithError{
 				R: &etcd.Response{
 					Node: nil,
 				},
@@ -373,7 +373,7 @@ func TestDeleteImageStreamTag(t *testing.T) {
 	for name, testCase := range tests {
 		fakeEtcdClient, helper, storage := setup(t)
 		if testCase.repo != nil {
-			fakeEtcdClient.Data["/imagestreams/default/test"] = tools.EtcdResponseWithError{
+			fakeEtcdClient.Data["/registry/imagestreams/default/test"] = tools.EtcdResponseWithError{
 				R: &etcd.Response{
 					Node: &etcd.Node{
 						Value:         runtime.EncodeOrDie(latest.Codec, testCase.repo),
@@ -382,7 +382,7 @@ func TestDeleteImageStreamTag(t *testing.T) {
 				},
 			}
 		} else {
-			fakeEtcdClient.Data["/imagestreams/default/test"] = tools.EtcdResponseWithError{
+			fakeEtcdClient.Data["/registry/imagestreams/default/test"] = tools.EtcdResponseWithError{
 				R: &etcd.Response{
 					Node: nil,
 				},
@@ -409,7 +409,7 @@ func TestDeleteImageStreamTag(t *testing.T) {
 		}
 
 		updatedRepo := &api.ImageStream{}
-		if err := helper.Get("/imagestreams/default/test", updatedRepo, false); err != nil {
+		if err := helper.Get(kapi.NewDefaultContext(), "/imagestreams/default/test", updatedRepo, false); err != nil {
 			t.Fatalf("%s: error retrieving updated repo: %s", name, err)
 		}
 		expected := map[string]api.TagReference{

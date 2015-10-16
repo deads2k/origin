@@ -128,7 +128,7 @@ func TestCreateAlreadyExists(t *testing.T) {
 		DockerImageReference: "foo/bar:abcd1234",
 	}
 
-	fakeEtcdClient.Data["/images/foo"] = tools.EtcdResponseWithError{
+	fakeEtcdClient.Data["/registry/images/foo"] = tools.EtcdResponseWithError{
 		R: &etcd.Response{
 			Node: &etcd.Node{
 				Value:         runtime.EncodeOrDie(latest.Codec, existingImage),
@@ -167,7 +167,7 @@ func TestListError(t *testing.T) {
 func TestListEmptyList(t *testing.T) {
 	fakeEtcdClient, helper := newHelper(t)
 	fakeEtcdClient.ChangeIndex = 1
-	fakeEtcdClient.Data["/images"] = tools.EtcdResponseWithError{
+	fakeEtcdClient.Data["/registry/images"] = tools.EtcdResponseWithError{
 		R: &etcd.Response{},
 		E: fakeEtcdClient.NewError(tools.EtcdErrorCodeNotFound),
 	}
@@ -188,7 +188,7 @@ func TestListEmptyList(t *testing.T) {
 func TestListPopulatedList(t *testing.T) {
 	fakeEtcdClient, helper := newHelper(t)
 	fakeEtcdClient.ChangeIndex = 1
-	fakeEtcdClient.Data["/images"] = tools.EtcdResponseWithError{
+	fakeEtcdClient.Data["/registry/images"] = tools.EtcdResponseWithError{
 		R: &etcd.Response{
 			Node: &etcd.Node{
 				Nodes: []*etcd.Node{
@@ -216,7 +216,7 @@ func TestListPopulatedList(t *testing.T) {
 func TestListFiltered(t *testing.T) {
 	fakeEtcdClient, helper := newHelper(t)
 	fakeEtcdClient.ChangeIndex = 1
-	fakeEtcdClient.Data["/images"] = tools.EtcdResponseWithError{
+	fakeEtcdClient.Data["/registry/images"] = tools.EtcdResponseWithError{
 		R: &etcd.Response{
 			Node: &etcd.Node{
 				Nodes: []*etcd.Node{
@@ -307,7 +307,7 @@ func TestGetError(t *testing.T) {
 func TestGetNotFound(t *testing.T) {
 	fakeEtcdClient, helper := newHelper(t)
 	storage := NewREST(helper)
-	fakeEtcdClient.Data["/images/foo"] = tools.EtcdResponseWithError{
+	fakeEtcdClient.Data["/registry/images/foo"] = tools.EtcdResponseWithError{
 		R: &etcd.Response{
 			Node: nil,
 		},
@@ -329,7 +329,7 @@ func TestGetOK(t *testing.T) {
 		ObjectMeta:           kapi.ObjectMeta{Name: "foo"},
 		DockerImageReference: "openshift/ruby-19-centos",
 	}
-	fakeEtcdClient.Data["/images/foo"] = tools.EtcdResponseWithError{
+	fakeEtcdClient.Data["/registry/images/foo"] = tools.EtcdResponseWithError{
 		R: &etcd.Response{
 			Node: &etcd.Node{
 				Value: runtime.EncodeOrDie(latest.Codec, expectedImage),
@@ -352,7 +352,7 @@ func TestGetOK(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	fakeEtcdClient, helper := newHelper(t)
-	fakeEtcdClient.Data["/images/foo"] = tools.EtcdResponseWithError{
+	fakeEtcdClient.Data["/registry/images/foo"] = tools.EtcdResponseWithError{
 		R: &etcd.Response{
 			Node: &etcd.Node{
 				Value: runtime.EncodeOrDie(latest.Codec, &api.Image{}),
@@ -379,7 +379,7 @@ func TestDelete(t *testing.T) {
 	}
 	if len(fakeEtcdClient.DeletedKeys) != 1 {
 		t.Errorf("Expected 1 delete, found %#v", fakeEtcdClient.DeletedKeys)
-	} else if key := "/images/foo"; fakeEtcdClient.DeletedKeys[0] != key {
+	} else if key := "/registry/images/foo"; fakeEtcdClient.DeletedKeys[0] != key {
 		t.Errorf("Unexpected key: %s, expected %s", fakeEtcdClient.DeletedKeys[0], key)
 	}
 }

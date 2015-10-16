@@ -214,7 +214,7 @@ func TestAddExistingImageWithNewTag(t *testing.T) {
 	}
 
 	fakeEtcdClient, _, storage := setup(t)
-	fakeEtcdClient.Data["/imagestreams/default"] = tools.EtcdResponseWithError{
+	fakeEtcdClient.Data["/registry/imagestreams/default"] = tools.EtcdResponseWithError{
 		R: &etcd.Response{
 			Node: &etcd.Node{
 				Nodes: []*etcd.Node{
@@ -226,7 +226,7 @@ func TestAddExistingImageWithNewTag(t *testing.T) {
 			},
 		},
 	}
-	fakeEtcdClient.Data["/imagestreams/default/somerepo"] = tools.EtcdResponseWithError{
+	fakeEtcdClient.Data["/registry/imagestreams/default/somerepo"] = tools.EtcdResponseWithError{
 		R: &etcd.Response{
 			Node: &etcd.Node{
 				Value:         runtime.EncodeOrDie(latest.Codec, existingRepo),
@@ -234,7 +234,7 @@ func TestAddExistingImageWithNewTag(t *testing.T) {
 			},
 		},
 	}
-	fakeEtcdClient.Data["/images/default/"+imageID] = tools.EtcdResponseWithError{
+	fakeEtcdClient.Data["/registry/images/default/"+imageID] = tools.EtcdResponseWithError{
 		R: &etcd.Response{
 			Node: &etcd.Node{
 				Value:         runtime.EncodeOrDie(latest.Codec, existingImage),
@@ -293,7 +293,7 @@ func TestAddExistingImageAndTag(t *testing.T) {
 	}
 
 	fakeEtcdClient, _, storage := setup(t)
-	fakeEtcdClient.Data["/imagestreams/default"] = tools.EtcdResponseWithError{
+	fakeEtcdClient.Data["/registry/imagestreams/default"] = tools.EtcdResponseWithError{
 		R: &etcd.Response{
 			Node: &etcd.Node{
 				Nodes: []*etcd.Node{
@@ -305,7 +305,7 @@ func TestAddExistingImageAndTag(t *testing.T) {
 			},
 		},
 	}
-	fakeEtcdClient.Data["/imagestreams/default/somerepo"] = tools.EtcdResponseWithError{
+	fakeEtcdClient.Data["/registry/imagestreams/default/somerepo"] = tools.EtcdResponseWithError{
 		R: &etcd.Response{
 			Node: &etcd.Node{
 				Value:         runtime.EncodeOrDie(latest.Codec, existingRepo),
@@ -313,7 +313,7 @@ func TestAddExistingImageAndTag(t *testing.T) {
 			},
 		},
 	}
-	fakeEtcdClient.Data["/images/default/existingImage"] = tools.EtcdResponseWithError{
+	fakeEtcdClient.Data["/registry/images/default/existingImage"] = tools.EtcdResponseWithError{
 		R: &etcd.Response{
 			Node: &etcd.Node{
 				Value:         runtime.EncodeOrDie(latest.Codec, existingImage),
