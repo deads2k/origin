@@ -118,7 +118,7 @@ func (factory *BuildControllerFactory) Create() controller.RunnableController {
 // CreateDeleteController constructs a BuildDeleteController
 func (factory *BuildControllerFactory) CreateDeleteController() controller.RunnableController {
 	client := ControllerClient{factory.KubeClient, factory.OSClient}
-	queue := cache.NewDeltaFIFO(cache.MetaNamespaceKeyFunc, nil, nil)
+	queue := cache.NewDeltaFIFO(cache.MetaNamespaceKeyFunc, nil, keyListerGetter{})
 	cache.NewReflector(&buildDeleteLW{client, queue}, &buildapi.Build{}, queue, 5*time.Minute).RunUntil(factory.Stop)
 
 	buildDeleteController := &buildcontroller.BuildDeleteController{
@@ -206,11 +206,29 @@ func (factory *BuildPodControllerFactory) Create() controller.RunnableController
 	}
 }
 
+// fakeKeyListerGetter is a dummy implementation of a KeyListerGetter
+// which always returns a fake object and true for gets, and
+// returns no items for list.  This forces the DeltaFIFO queue
+// to always queue delete events it receives from etcd.  Our
+// client will properly handle duplicated events and this is more
+// efficient than maintaining a local cache of all the build pods
+// so the DeltaFIFO can perform a proper diff.
+type fakeKeyListerGetter struct {
+	client osclient.Interface
+}
+
+func (keyListerGetter) ListKeys() []string {
+	return []string{}
+}
+func (keyListerGetter) GetByKey(key string) (interface{}, bool, error) {
+	return "", true, nil
+}
+
 // CreateDeleteController constructs a BuildPodDeleteController
 func (factory *BuildPodControllerFactory) CreateDeleteController() controller.RunnableController {
 
 	client := ControllerClient{factory.KubeClient, factory.OSClient}
-	queue := cache.NewDeltaFIFO(cache.MetaNamespaceKeyFunc, nil, nil)
+	queue := cache.NewDeltaFIFO(cache.MetaNamespaceKeyFunc, nil, keyListerGetter{})
 	cache.NewReflector(&buildPodDeleteLW{client, queue}, &kapi.Pod{}, queue, 5*time.Minute).RunUntil(factory.Stop)
 
 	buildPodDeleteController := &buildcontroller.BuildPodDeleteController{
