@@ -270,10 +270,10 @@ func NewFactory(clientConfig kclientcmd.ClientConfig) *Factory {
 		kubeGenerators := kGenerators(cmdName)
 
 		ret := map[string]kubectl.Generator{}
-		for k, v := range originGenerators {
+		for k, v := range kubeGenerators {
 			ret[k] = v
 		}
-		for k, v := range kubeGenerators {
+		for k, v := range originGenerators {
 			ret[k] = v
 		}
 		return ret
