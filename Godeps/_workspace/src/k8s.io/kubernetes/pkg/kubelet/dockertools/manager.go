@@ -932,7 +932,7 @@ func (dm *DockerManager) podInfraContainerChanged(pod *api.Pod, podInfraContaine
 		}
 	} else {
 		// Docker only exports ports from the pod infra container. Let's
-		// collect all of the relevant ports and export them.
+		// collect all of the relevant ports and export them.c
 		for _, container := range pod.Spec.Containers {
 			ports = append(ports, container.Ports...)
 		}
@@ -955,6 +955,7 @@ type dockerVersion struct {
 }
 
 func newDockerVersion(version string) (dockerVersion, error) {
+	version = strings.Replace(version, ".fc21", "", 1)
 	sem, err := semver.NewVersion(version)
 	if err != nil {
 		return dockerVersion{}, err
