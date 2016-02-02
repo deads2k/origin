@@ -7,11 +7,14 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"k8s.io/kubernetes/pkg/api/unversioned"
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 	"k8s.io/kubernetes/pkg/kubectl/resource"
 	"k8s.io/kubernetes/pkg/util/errors"
 
 	buildapi "github.com/openshift/origin/pkg/build/api"
+	ocmdutil "github.com/openshift/origin/pkg/cmd/util"
 	"github.com/openshift/origin/pkg/cmd/util/clientcmd"
 	configcmd "github.com/openshift/origin/pkg/config/cmd"
 	newapp "github.com/openshift/origin/pkg/generate/app"
@@ -165,6 +168,17 @@ func RunNewBuild(fullName string, f *clientcmd.Factory, out io.Writer, in io.Rea
 	case shortOutput:
 		indent = ""
 	case len(output) != 0:
+		requestedOutputVersionString := cmdutil.GetFlagString(c, "output-version")
+		requestedOutputVersion, err := unversioned.ParseGroupVersion(requestedOutputVersionString)
+		if err != nil {
+			return err
+		}
+
+		result.List.Items, err = ocmdutil.ConvertItemsForDisplay(result.List.Items, requestedOutputVersion)
+		if err != nil {
+			return err
+		}
+
 		return f.Factory.PrintObject(c, result.List, out)
 	default:
 		if len(config.Labels) > 0 {
