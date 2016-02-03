@@ -500,9 +500,7 @@ func TestTypes(t *testing.T) {
 				}
 				continue
 			}
-			t.Logf(`About to test %v with "v1beta3"`, kind)
-			fuzzInternalObject(t, v1beta3.SchemeGroupVersion, item, seed)
-			roundTrip(t, kapi.Codecs.LegacyCodec(v1beta3.SchemeGroupVersion), item)
+
 			t.Logf(`About to test %v with "v1"`, kind)
 			fuzzInternalObject(t, v1.SchemeGroupVersion, item, seed)
 			roundTrip(t, kapi.Codecs.LegacyCodec(v1.SchemeGroupVersion), item)
