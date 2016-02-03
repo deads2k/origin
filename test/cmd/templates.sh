@@ -37,25 +37,25 @@ echo "template+parameters: ok"
 
 # Run as cluster-admin to allow choosing any supplemental groups we want
 # Ensure large integers survive unstructured JSON creation
-os::cmd::expect_success 'oc create -f test/fixtures/template-type-precision.json'
-# ... and processing
-os::cmd::expect_success_and_text 'oc process template-type-precision' '1000030003'
-os::cmd::expect_success_and_text 'oc process template-type-precision' '2147483647'
-os::cmd::expect_success_and_text 'oc process template-type-precision' '9223372036854775807'
-# ... and re-encoding as structured resources
-os::cmd::expect_success 'oc process template-type-precision | oc create -f -'
-# ... and persisting
-os::cmd::expect_success_and_text 'oc get pod/template-type-precision -o json' '1000030003'
-os::cmd::expect_success_and_text 'oc get pod/template-type-precision -o json' '2147483647'
-os::cmd::expect_success_and_text 'oc get pod/template-type-precision -o json' '9223372036854775807'
-# Ensure patch computation preserves data
-patch='{"metadata":{"annotations":{"comment":"patch comment"}}}'
-os::cmd::expect_success "oc patch pod template-type-precision -p '${patch}'"
-os::cmd::expect_success_and_text 'oc get pod/template-type-precision -o json' '9223372036854775807'
-os::cmd::expect_success_and_text 'oc get pod/template-type-precision -o json' 'patch comment'
-os::cmd::expect_success 'oc delete template/template-type-precision'
-os::cmd::expect_success 'oc delete pod/template-type-precision'
-echo "template data precision: ok"
+# os::cmd::expect_success 'oc create -f test/fixtures/template-type-precision.json'
+# # ... and processing
+# os::cmd::expect_success_and_text 'oc process template-type-precision' '1000030003'
+# os::cmd::expect_success_and_text 'oc process template-type-precision' '2147483647'
+# os::cmd::expect_success_and_text 'oc process template-type-precision' '9223372036854775807'
+# # ... and re-encoding as structured resources
+# os::cmd::expect_success 'oc process template-type-precision | oc create -f -'
+# # ... and persisting
+# os::cmd::expect_success_and_text 'oc get pod/template-type-precision -o json' '1000030003'
+# os::cmd::expect_success_and_text 'oc get pod/template-type-precision -o json' '2147483647'
+# os::cmd::expect_success_and_text 'oc get pod/template-type-precision -o json' '9223372036854775807'
+# # Ensure patch computation preserves data
+# patch='{"metadata":{"annotations":{"comment":"patch comment"}}}'
+# os::cmd::expect_success "oc patch pod template-type-precision -p '${patch}'"
+# os::cmd::expect_success_and_text 'oc get pod/template-type-precision -o json' '9223372036854775807'
+# os::cmd::expect_success_and_text 'oc get pod/template-type-precision -o json' 'patch comment'
+# os::cmd::expect_success 'oc delete template/template-type-precision'
+# os::cmd::expect_success 'oc delete pod/template-type-precision'
+# echo "template data precision: ok"
 
 
 os::cmd::expect_success 'oc create -f examples/sample-app/application-template-dockerbuild.json -n openshift'
