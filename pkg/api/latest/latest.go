@@ -6,24 +6,22 @@ import (
 
 	"k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/api/unversioned"
-
-	_ "github.com/openshift/origin/pkg/api"
-	"github.com/openshift/origin/pkg/api/v1"
-	"github.com/openshift/origin/pkg/api/v1beta3"
 )
 
+// HACK TO ELIMINATE CYCLES UNTIL WE KILL THIS PACKAGE
+
 // Version is the string that represents the current external default version.
-var Version = v1.SchemeGroupVersion
+var Version = unversioned.GroupVersion{Group: "", Version: "v1"}
 
 // OldestVersion is the string that represents the oldest server version supported,
 // for client code that wants to hardcode the lowest common denominator.
-var OldestVersion = v1beta3.SchemeGroupVersion
+var OldestVersion = unversioned.GroupVersion{Group: "", Version: "v1beta3"}
 
 // Versions is the list of versions that are recognized in code. The order provided
 // may be assumed to be most preferred to least preferred, and clients may
 // choose to prefer the earlier items in the list over the latter items when presented
 // with a set of versions to choose.
-var Versions = []unversioned.GroupVersion{v1.SchemeGroupVersion, v1beta3.SchemeGroupVersion}
+var Versions = []unversioned.GroupVersion{unversioned.GroupVersion{Group: "", Version: "v1"}, unversioned.GroupVersion{Group: "", Version: "v1beta3"}}
 
 // originTypes are the hardcoded types defined by the OpenShift API.
 var originTypes map[unversioned.GroupVersionKind]bool
