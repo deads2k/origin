@@ -110,7 +110,7 @@ func addVersionsToScheme(externalVersions ...unversioned.GroupVersion) {
 }
 
 func newRESTMapper(externalVersions []unversioned.GroupVersion) meta.RESTMapper {
-	rootScoped := sets.NewString("SubjectAccessReview", "ResourceAccessReview", "ClusterRole", "ClusterRoleBinding", "ClusterPolicy", "ClusterPolicyBinding")
+	rootScoped := sets.NewString("ClusterRole", "ClusterRoleBinding", "ClusterPolicy", "ClusterPolicyBinding")
 	ignoredKinds := sets.NewString()
 	return kapi.NewDefaultRESTMapper(externalVersions, interfacesFor, importPrefix, ignoredKinds, rootScoped)
 }
