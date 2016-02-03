@@ -5,6 +5,7 @@ package integration
 import (
 	"path"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 
@@ -409,10 +410,10 @@ func TestUserInitialization(t *testing.T) {
 
 	for k, testcase := range testcases {
 		// Cleanup
-		if _, err := oldEtcdClient.Delete(path.Join(masterConfig.EtcdStorageConfig.OpenShiftStoragePrefix, useretcd.EtcdPrefix), true); err != nil && !etcdutil.IsEtcdNotFound(err) {
+		if _, err := oldEtcdClient.Delete(path.Join(masterConfig.EtcdStorageConfig.OpenShiftStoragePrefix, useretcd.EtcdPrefix), true); err != nil && !(etcdutil.IsEtcdNotFound(err) || strings.Contains(err.Error(), "Key not found")) {
 			t.Fatalf("Could not clean up users: %v", err)
 		}
-		if _, err := oldEtcdClient.Delete(path.Join(masterConfig.EtcdStorageConfig.OpenShiftStoragePrefix, identityetcd.EtcdPrefix), true); err != nil && !etcdutil.IsEtcdNotFound(err) {
+		if _, err := oldEtcdClient.Delete(path.Join(masterConfig.EtcdStorageConfig.OpenShiftStoragePrefix, identityetcd.EtcdPrefix), true); err != nil && !(etcdutil.IsEtcdNotFound(err) || strings.Contains(err.Error(), "Key not found")) {
 			t.Fatalf("Could not clean up identities: %v", err)
 		}
 
