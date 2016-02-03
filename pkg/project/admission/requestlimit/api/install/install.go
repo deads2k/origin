@@ -31,8 +31,8 @@ import (
 	"k8s.io/kubernetes/pkg/runtime"
 	"k8s.io/kubernetes/pkg/util/sets"
 
-	api "github.com/openshift/origin/pkg/project/admission/requestlimit"
-	"github.com/openshift/origin/pkg/project/admission/requestlimit/v1"
+	"github.com/openshift/origin/pkg/project/admission/requestlimit/api"
+	"github.com/openshift/origin/pkg/project/admission/requestlimit/api/v1"
 )
 
 const importPrefix = "github.com/openshift/origin/pkg/project/admission/requestlimit"
