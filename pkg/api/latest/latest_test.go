@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	kapi "k8s.io/kubernetes/pkg/api"
-	klatest "k8s.io/kubernetes/pkg/api/latest"
 	"k8s.io/kubernetes/pkg/api/meta"
 	"k8s.io/kubernetes/pkg/apimachinery/registered"
 )
@@ -35,7 +34,7 @@ func TestResourceToKind(t *testing.T) {
 
 func TestUpstreamResourceToKind(t *testing.T) {
 	// Ensure we resolve to klatest.ExternalVersions[0]
-	expectedGVK := klatest.ExternalVersions[0].WithKind("Pod")
+	expectedGVK := runtime.ExternalVersions[0].WithKind("Pod")
 	gvk, err := registered.GroupOrDie(kapi.SchemeGroupVersion.Group).RESTMapper.KindFor("pod")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
