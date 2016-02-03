@@ -198,8 +198,8 @@ func testCompatibility(
 ) {
 
 	// Decode
-	var obj runtime.Object
-	if err := runtime.DecodeInto(api.Codecs.UniversalDecoder(), input, obj); err != nil {
+	obj, err := runtime.Decode(api.Codecs.UniversalDecoder(), input)
+	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 

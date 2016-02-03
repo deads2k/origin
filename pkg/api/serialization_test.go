@@ -22,7 +22,6 @@ import (
 	"k8s.io/kubernetes/pkg/util/sets"
 
 	osapi "github.com/openshift/origin/pkg/api"
-	_ "github.com/openshift/origin/pkg/api/install"
 	_ "github.com/openshift/origin/pkg/api/latest"
 	"github.com/openshift/origin/pkg/api/v1"
 	"github.com/openshift/origin/pkg/api/v1beta3"
@@ -35,6 +34,11 @@ import (
 	route "github.com/openshift/origin/pkg/route/api"
 	template "github.com/openshift/origin/pkg/template/api"
 	uservalidation "github.com/openshift/origin/pkg/user/api/validation"
+
+	// install all APIs
+	_ "github.com/openshift/origin/pkg/api/install"
+	_ "k8s.io/kubernetes/pkg/api/install"
+	_ "k8s.io/kubernetes/pkg/apis/extensions/install"
 )
 
 func fuzzInternalObject(t *testing.T, forVersion unversioned.GroupVersion, item runtime.Object, seed int64) runtime.Object {
@@ -416,6 +420,7 @@ func roundTrip(t *testing.T, codec runtime.Codec, originalItem runtime.Object) {
 		}
 		obj2 = obj2conv
 	}
+
 	if !kapi.Semantic.DeepEqual(originalItem, obj2) {
 		t.Errorf("1: %v: diff: %v\nCodec: %v\nData: %s\nSource: %s", name, util.ObjectDiff(originalItem, obj2), codec, string(data), util.ObjectGoPrintSideBySide(originalItem, obj2))
 		return
