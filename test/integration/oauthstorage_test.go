@@ -62,7 +62,10 @@ func TestOAuthStorage(t *testing.T) {
 	testutil.DeleteAllEtcdKeys()
 
 	groupMeta := registered.GroupOrDie(api.GroupName)
-	etcdClient := testutil.NewEtcdClient()
+	etcdClient, err := testutil.MakeNewEtcdClient()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	etcdHelper := etcdstorage.NewEtcdStorage(etcdClient, kapi.Codecs.LegacyCodec(groupMeta.GroupVersions...), etcdtest.PathPrefix())
 
 	accessTokenStorage := accesstokenetcd.NewREST(etcdHelper)
