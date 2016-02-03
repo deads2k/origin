@@ -198,9 +198,8 @@ func testCompatibility(
 ) {
 
 	// Decode
-	codec := runtime.CodecFor(api.Scheme, version)
-	obj, err := codec.Decode(input)
-	if err != nil {
+	var obj runtime.Object
+	if err := runtime.DecodeInto(api.Codecs.UniversalDecoder(), input, obj); err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
@@ -211,14 +210,11 @@ func testCompatibility(
 	}
 
 	// Encode
-	output, err := codec.Encode(obj)
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
+	output := runtime.EncodeOrDie(api.Codecs.LegacyCodec(unversioned.GroupVersion{Group: "", Version: version}), obj)
 
 	// Validate old and new fields are encoded
 	generic := map[string]interface{}{}
-	if err := json.Unmarshal(output, &generic); err != nil {
+	if err := json.Unmarshal([]byte(output), &generic); err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 	for k, expectedValue := range serialized {
