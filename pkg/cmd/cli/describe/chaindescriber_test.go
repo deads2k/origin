@@ -164,7 +164,7 @@ func TestChainDescriber(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		o := ktestclient.NewObjects(kapi.Scheme, kapi.Scheme)
+		o := ktestclient.NewObjects(kapi.Scheme, kapi.Codecs.UniversalDecoder())
 		if len(test.path) > 0 {
 			if err := ktestclient.AddObjectsFromPath(test.path, o, kapi.Scheme); err != nil {
 				t.Fatal(err)
