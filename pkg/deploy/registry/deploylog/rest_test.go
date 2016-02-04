@@ -21,7 +21,7 @@ import (
 )
 
 func makeDeployment(version int) kapi.ReplicationController {
-	deployment, _ := deployutil.MakeDeployment(deploytest.OkDeploymentConfig(version), kapi.Codec)
+	deployment, _ := deployutil.MakeDeployment(deploytest.OkDeploymentConfig(version), kapi.Codecs.LegacyCodec(api.SchemeGroupVersion))
 	return *deployment
 }
 
@@ -124,7 +124,7 @@ func TestRESTGet(t *testing.T) {
 				Transport:       nil,
 				ContentType:     "text/plain",
 				Flush:           true,
-				ResponseChecker: genericrest.NewGenericHttpResponseChecker("Pod", "config-1-deploy"),
+				ResponseChecker: genericrest.NewGenericHttpResponseChecker(kapi.Resource("Pod"), "config-1-deploy"),
 			},
 			expectedErr: nil,
 		},
@@ -150,7 +150,7 @@ func TestRESTGet(t *testing.T) {
 				Transport:       nil,
 				ContentType:     "text/plain",
 				Flush:           false,
-				ResponseChecker: genericrest.NewGenericHttpResponseChecker("Pod", "config-2-deploy"),
+				ResponseChecker: genericrest.NewGenericHttpResponseChecker(kapi.Resource("Pod"), "config-2-deploy"),
 			},
 			expectedErr: nil,
 		},
@@ -168,7 +168,7 @@ func TestRESTGet(t *testing.T) {
 				Transport:       nil,
 				ContentType:     "text/plain",
 				Flush:           false,
-				ResponseChecker: genericrest.NewGenericHttpResponseChecker("Pod", "config-2-deploy"),
+				ResponseChecker: genericrest.NewGenericHttpResponseChecker(kapi.Resource("Pod"), "config-2-deploy"),
 			},
 			expectedErr: nil,
 		},

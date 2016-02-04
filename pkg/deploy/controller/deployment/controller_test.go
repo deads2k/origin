@@ -11,8 +11,8 @@ import (
 	"k8s.io/kubernetes/pkg/api/resource"
 	"k8s.io/kubernetes/pkg/client/record"
 
-	api "github.com/openshift/origin/pkg/api/latest"
 	deployapi "github.com/openshift/origin/pkg/deploy/api"
+	_ "github.com/openshift/origin/pkg/deploy/api/install"
 	deploytest "github.com/openshift/origin/pkg/deploy/api/test"
 	deployutil "github.com/openshift/origin/pkg/deploy/util"
 )
@@ -28,7 +28,7 @@ func TestHandle_createPodOk(t *testing.T) {
 
 	controller := &DeploymentController{
 		decodeConfig: func(deployment *kapi.ReplicationController) (*deployapi.DeploymentConfig, error) {
-			return deployutil.DecodeDeploymentConfig(deployment, api.Codec)
+			return deployutil.DecodeDeploymentConfig(deployment, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 		},
 		deploymentClient: &deploymentClientImpl{
 			updateDeploymentFunc: func(namespace string, deployment *kapi.ReplicationController) (*kapi.ReplicationController, error) {
@@ -50,7 +50,7 @@ func TestHandle_createPodOk(t *testing.T) {
 
 	// Verify new -> pending
 	config := deploytest.OkDeploymentConfig(1)
-	deployment, _ := deployutil.MakeDeployment(config, kapi.Codec)
+	deployment, _ := deployutil.MakeDeployment(config, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 	deployment.Annotations[deployapi.DeploymentStatusAnnotation] = string(deployapi.DeploymentStatusNew)
 	deployment.Spec.Template.Spec.NodeSelector = map[string]string{"labelKey1": "labelValue1", "labelKey2": "labelValue2"}
 	err := controller.Handle(deployment)
@@ -129,7 +129,7 @@ func TestHandle_makeContainerFail(t *testing.T) {
 
 	controller := &DeploymentController{
 		decodeConfig: func(deployment *kapi.ReplicationController) (*deployapi.DeploymentConfig, error) {
-			return deployutil.DecodeDeploymentConfig(deployment, api.Codec)
+			return deployutil.DecodeDeploymentConfig(deployment, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 		},
 		deploymentClient: &deploymentClientImpl{
 			updateDeploymentFunc: func(namespace string, deployment *kapi.ReplicationController) (*kapi.ReplicationController, error) {
@@ -150,7 +150,7 @@ func TestHandle_makeContainerFail(t *testing.T) {
 	}
 
 	config := deploytest.OkDeploymentConfig(1)
-	deployment, _ := deployutil.MakeDeployment(config, kapi.Codec)
+	deployment, _ := deployutil.MakeDeployment(config, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 	deployment.Annotations[deployapi.DeploymentStatusAnnotation] = string(deployapi.DeploymentStatusNew)
 	err := controller.Handle(deployment)
 
@@ -170,7 +170,7 @@ func TestHandle_createPodFail(t *testing.T) {
 
 	controller := &DeploymentController{
 		decodeConfig: func(deployment *kapi.ReplicationController) (*deployapi.DeploymentConfig, error) {
-			return deployutil.DecodeDeploymentConfig(deployment, api.Codec)
+			return deployutil.DecodeDeploymentConfig(deployment, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 		},
 		deploymentClient: &deploymentClientImpl{
 			updateDeploymentFunc: func(namespace string, deployment *kapi.ReplicationController) (*kapi.ReplicationController, error) {
@@ -190,7 +190,7 @@ func TestHandle_createPodFail(t *testing.T) {
 	}
 
 	config := deploytest.OkDeploymentConfig(1)
-	deployment, _ := deployutil.MakeDeployment(config, kapi.Codec)
+	deployment, _ := deployutil.MakeDeployment(config, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 	deployment.Annotations[deployapi.DeploymentStatusAnnotation] = string(deployapi.DeploymentStatusNew)
 	err := controller.Handle(deployment)
 
@@ -210,13 +210,13 @@ func TestHandle_deployerPodAlreadyExists(t *testing.T) {
 	var updatedDeployment *kapi.ReplicationController
 
 	config := deploytest.OkDeploymentConfig(1)
-	deployment, _ := deployutil.MakeDeployment(config, kapi.Codec)
+	deployment, _ := deployutil.MakeDeployment(config, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 	deployment.Annotations[deployapi.DeploymentStatusAnnotation] = string(deployapi.DeploymentStatusNew)
 	deployerPod := relatedPod(deployment)
 
 	controller := &DeploymentController{
 		decodeConfig: func(deployment *kapi.ReplicationController) (*deployapi.DeploymentConfig, error) {
-			return deployutil.DecodeDeploymentConfig(deployment, api.Codec)
+			return deployutil.DecodeDeploymentConfig(deployment, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 		},
 		deploymentClient: &deploymentClientImpl{
 			updateDeploymentFunc: func(namespace string, deployment *kapi.ReplicationController) (*kapi.ReplicationController, error) {
@@ -260,13 +260,13 @@ func TestHandle_unrelatedPodAlreadyExists(t *testing.T) {
 	var updatedDeployment *kapi.ReplicationController
 
 	config := deploytest.OkDeploymentConfig(1)
-	deployment, _ := deployutil.MakeDeployment(config, kapi.Codec)
+	deployment, _ := deployutil.MakeDeployment(config, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 	deployment.Annotations[deployapi.DeploymentStatusAnnotation] = string(deployapi.DeploymentStatusNew)
 	otherPod := unrelatedPod(deployment)
 
 	controller := &DeploymentController{
 		decodeConfig: func(deployment *kapi.ReplicationController) (*deployapi.DeploymentConfig, error) {
-			return deployutil.DecodeDeploymentConfig(deployment, api.Codec)
+			return deployutil.DecodeDeploymentConfig(deployment, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 		},
 		deploymentClient: &deploymentClientImpl{
 			updateDeploymentFunc: func(namespace string, deployment *kapi.ReplicationController) (*kapi.ReplicationController, error) {
@@ -279,7 +279,7 @@ func TestHandle_unrelatedPodAlreadyExists(t *testing.T) {
 				return otherPod, nil
 			},
 			createPodFunc: func(namespace string, pod *kapi.Pod) (*kapi.Pod, error) {
-				return nil, kerrors.NewAlreadyExists("Pod", pod.Name)
+				return nil, kerrors.NewAlreadyExists(kapi.Resource("Pod"), pod.Name)
 			},
 		},
 		makeContainer: func(strategy *deployapi.DeploymentStrategy) (*kapi.Container, error) {
@@ -312,7 +312,7 @@ func TestHandle_unrelatedPodAlreadyExists(t *testing.T) {
 func TestHandle_noop(t *testing.T) {
 	controller := &DeploymentController{
 		decodeConfig: func(deployment *kapi.ReplicationController) (*deployapi.DeploymentConfig, error) {
-			return deployutil.DecodeDeploymentConfig(deployment, api.Codec)
+			return deployutil.DecodeDeploymentConfig(deployment, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 		},
 		deploymentClient: &deploymentClientImpl{
 			updateDeploymentFunc: func(namespace string, deployment *kapi.ReplicationController) (*kapi.ReplicationController, error) {
@@ -338,7 +338,7 @@ func TestHandle_noop(t *testing.T) {
 
 	// Verify no-op
 	config := deploytest.OkDeploymentConfig(1)
-	deployment, _ := deployutil.MakeDeployment(config, kapi.Codec)
+	deployment, _ := deployutil.MakeDeployment(config, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 
 	noopStatus := []deployapi.DeploymentStatus{
 		deployapi.DeploymentStatusPending,
@@ -363,7 +363,7 @@ func TestHandle_cleanupPodOk(t *testing.T) {
 
 	controller := &DeploymentController{
 		decodeConfig: func(deployment *kapi.ReplicationController) (*deployapi.DeploymentConfig, error) {
-			return deployutil.DecodeDeploymentConfig(deployment, api.Codec)
+			return deployutil.DecodeDeploymentConfig(deployment, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 		},
 		deploymentClient: &deploymentClientImpl{
 			updateDeploymentFunc: func(namespace string, deployment *kapi.ReplicationController) (*kapi.ReplicationController, error) {
@@ -399,7 +399,7 @@ func TestHandle_cleanupPodOk(t *testing.T) {
 
 	// Verify successful cleanup
 	config := deploytest.OkDeploymentConfig(1)
-	deployment, _ := deployutil.MakeDeployment(config, kapi.Codec)
+	deployment, _ := deployutil.MakeDeployment(config, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 	deployment.Annotations[deployapi.DeploymentStatusAnnotation] = string(deployapi.DeploymentStatusComplete)
 	err := controller.Handle(deployment)
 
@@ -420,7 +420,7 @@ func TestHandle_cleanupPodOk(t *testing.T) {
 func TestHandle_cleanupPodNoop(t *testing.T) {
 	controller := &DeploymentController{
 		decodeConfig: func(deployment *kapi.ReplicationController) (*deployapi.DeploymentConfig, error) {
-			return deployutil.DecodeDeploymentConfig(deployment, api.Codec)
+			return deployutil.DecodeDeploymentConfig(deployment, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 		},
 		deploymentClient: &deploymentClientImpl{
 			updateDeploymentFunc: func(namespace string, deployment *kapi.ReplicationController) (*kapi.ReplicationController, error) {
@@ -450,7 +450,7 @@ func TestHandle_cleanupPodNoop(t *testing.T) {
 
 	// Verify no-op
 	config := deploytest.OkDeploymentConfig(1)
-	deployment, _ := deployutil.MakeDeployment(config, kapi.Codec)
+	deployment, _ := deployutil.MakeDeployment(config, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 	deployment.Annotations[deployapi.DeploymentStatusAnnotation] = string(deployapi.DeploymentStatusComplete)
 	err := controller.Handle(deployment)
 
@@ -464,7 +464,7 @@ func TestHandle_cleanupPodNoop(t *testing.T) {
 func TestHandle_cleanupPodFail(t *testing.T) {
 	controller := &DeploymentController{
 		decodeConfig: func(deployment *kapi.ReplicationController) (*deployapi.DeploymentConfig, error) {
-			return deployutil.DecodeDeploymentConfig(deployment, api.Codec)
+			return deployutil.DecodeDeploymentConfig(deployment, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 		},
 		deploymentClient: &deploymentClientImpl{
 			updateDeploymentFunc: func(namespace string, deployment *kapi.ReplicationController) (*kapi.ReplicationController, error) {
@@ -493,7 +493,7 @@ func TestHandle_cleanupPodFail(t *testing.T) {
 
 	// Verify error
 	config := deploytest.OkDeploymentConfig(1)
-	deployment, _ := deployutil.MakeDeployment(config, kapi.Codec)
+	deployment, _ := deployutil.MakeDeployment(config, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 	deployment.Annotations[deployapi.DeploymentStatusAnnotation] = string(deployapi.DeploymentStatusComplete)
 	err := controller.Handle(deployment)
 
@@ -507,7 +507,7 @@ func TestHandle_cancelNew(t *testing.T) {
 
 	controller := &DeploymentController{
 		decodeConfig: func(deployment *kapi.ReplicationController) (*deployapi.DeploymentConfig, error) {
-			return deployutil.DecodeDeploymentConfig(deployment, api.Codec)
+			return deployutil.DecodeDeploymentConfig(deployment, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 		},
 		deploymentClient: &deploymentClientImpl{
 			updateDeploymentFunc: func(namespace string, deployment *kapi.ReplicationController) (*kapi.ReplicationController, error) {
@@ -527,7 +527,7 @@ func TestHandle_cancelNew(t *testing.T) {
 		recorder: &record.FakeRecorder{},
 	}
 
-	deployment, _ := deployutil.MakeDeployment(deploytest.OkDeploymentConfig(1), kapi.Codec)
+	deployment, _ := deployutil.MakeDeployment(deploytest.OkDeploymentConfig(1), kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 	deployment.Annotations[deployapi.DeploymentStatusAnnotation] = string(deployapi.DeploymentStatusNew)
 	deployment.Annotations[deployapi.DeploymentCancelledAnnotation] = deployapi.DeploymentCancelledAnnotationValue
 
@@ -549,7 +549,7 @@ func TestHandle_cancelPendingRunning(t *testing.T) {
 
 	controller := &DeploymentController{
 		decodeConfig: func(deployment *kapi.ReplicationController) (*deployapi.DeploymentConfig, error) {
-			return deployutil.DecodeDeploymentConfig(deployment, api.Codec)
+			return deployutil.DecodeDeploymentConfig(deployment, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 		},
 		deploymentClient: &deploymentClientImpl{
 			updateDeploymentFunc: func(namespace string, deployment *kapi.ReplicationController) (*kapi.ReplicationController, error) {
@@ -587,7 +587,7 @@ func TestHandle_cancelPendingRunning(t *testing.T) {
 
 	for _, status := range cases {
 		updatedPods = []kapi.Pod{}
-		deployment, _ := deployutil.MakeDeployment(deploytest.OkDeploymentConfig(1), kapi.Codec)
+		deployment, _ := deployutil.MakeDeployment(deploytest.OkDeploymentConfig(1), kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 		deployment.Annotations[deployapi.DeploymentStatusAnnotation] = string(status)
 		deployment.Annotations[deployapi.DeploymentCancelledAnnotation] = deployapi.DeploymentCancelledAnnotationValue
 		err := controller.Handle(deployment)
@@ -614,7 +614,7 @@ func TestHandle_deployerPodDisappeared(t *testing.T) {
 	updateCalled := false
 	controller := &DeploymentController{
 		decodeConfig: func(deployment *kapi.ReplicationController) (*deployapi.DeploymentConfig, error) {
-			return deployutil.DecodeDeploymentConfig(deployment, api.Codec)
+			return deployutil.DecodeDeploymentConfig(deployment, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 		},
 		deploymentClient: &deploymentClientImpl{
 			updateDeploymentFunc: func(namespace string, deployment *kapi.ReplicationController) (*kapi.ReplicationController, error) {
@@ -625,7 +625,7 @@ func TestHandle_deployerPodDisappeared(t *testing.T) {
 		},
 		podClient: &podClientImpl{
 			getPodFunc: func(namespace, name string) (*kapi.Pod, error) {
-				return nil, kerrors.NewNotFound("Pod", name)
+				return nil, kerrors.NewNotFound(kapi.Resource("Pod"), name)
 			},
 		},
 		makeContainer: func(strategy *deployapi.DeploymentStrategy) (*kapi.Container, error) {
@@ -634,7 +634,7 @@ func TestHandle_deployerPodDisappeared(t *testing.T) {
 		recorder: &record.FakeRecorder{},
 	}
 
-	deployment, _ := deployutil.MakeDeployment(deploytest.OkDeploymentConfig(1), kapi.Codec)
+	deployment, _ := deployutil.MakeDeployment(deploytest.OkDeploymentConfig(1), kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 	deployment.Annotations[deployapi.DeploymentStatusAnnotation] = string(deployapi.DeploymentStatusRunning)
 
 	err := controller.Handle(deployment)
@@ -668,7 +668,7 @@ func expectMapContains(t *testing.T, exists, expected map[string]string, what st
 func TestDeployerCustomLabelsAndAnnotations(t *testing.T) {
 	controller := &DeploymentController{
 		decodeConfig: func(deployment *kapi.ReplicationController) (*deployapi.DeploymentConfig, error) {
-			return deployutil.DecodeDeploymentConfig(deployment, api.Codec)
+			return deployutil.DecodeDeploymentConfig(deployment, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 		},
 		podClient: &podClientImpl{
 			createPodFunc: func(namespace string, pod *kapi.Pod) (*kapi.Pod, error) {
@@ -700,7 +700,7 @@ func TestDeployerCustomLabelsAndAnnotations(t *testing.T) {
 		config.Spec.Strategy.Labels = test.labels
 		config.Spec.Strategy.Annotations = test.annotations
 
-		deployment, _ := deployutil.MakeDeployment(config, kapi.Codec)
+		deployment, _ := deployutil.MakeDeployment(config, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 		podTemplate, err := controller.makeDeployerPod(deployment)
 		if err != nil {
 			t.Fatal(err)

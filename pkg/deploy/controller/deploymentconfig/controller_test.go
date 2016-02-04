@@ -14,6 +14,7 @@ import (
 
 	"github.com/openshift/origin/pkg/client/testclient"
 	deployapi "github.com/openshift/origin/pkg/deploy/api"
+	_ "github.com/openshift/origin/pkg/deploy/api/install"
 	deploytest "github.com/openshift/origin/pkg/deploy/api/test"
 	deployutil "github.com/openshift/origin/pkg/deploy/util"
 )
@@ -32,7 +33,7 @@ func TestHandleScenarios(t *testing.T) {
 	}
 
 	mkdeployment := func(d deployment) kapi.ReplicationController {
-		deployment, _ := deployutil.MakeDeployment(deploytest.OkDeploymentConfig(d.version), kapi.Codec)
+		deployment, _ := deployutil.MakeDeployment(deploytest.OkDeploymentConfig(d.version), kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 		deployment.Annotations[deployapi.DeploymentStatusAnnotation] = string(d.status)
 		if d.cancelled {
 			deployment.Annotations[deployapi.DeploymentCancelledAnnotation] = deployapi.DeploymentCancelledAnnotationValue
@@ -588,7 +589,7 @@ func TestHandleScenarios(t *testing.T) {
 		controller := &DeploymentConfigController{
 			kubeClient: kc,
 			osClient:   oc,
-			codec:      kapi.Codec,
+			codec:      kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion),
 			recorder:   recorder,
 		}
 
