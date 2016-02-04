@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
+	"k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/api/unversioned"
 	"k8s.io/kubernetes/pkg/runtime"
 	"k8s.io/kubernetes/pkg/util"
@@ -351,7 +352,7 @@ type AdmissionPluginTestConfig struct {
 	Data string `json:"data"`
 }
 
-func (*AdmissionPluginTestConfig) IsAnAPIObject() {}
+func (obj *AdmissionPluginTestConfig) GetObjectKind() unversioned.ObjectKind { return &obj.TypeMeta }
 
 func TestMasterConfig(t *testing.T) {
 	internal.Scheme.AddKnownTypes(SchemeGroupVersion, &AdmissionPluginTestConfig{})
@@ -366,7 +367,7 @@ func TestMasterConfig(t *testing.T) {
 			AdmissionConfig: internal.AdmissionConfig{
 				PluginConfig: map[string]internal.AdmissionPluginConfig{ // test config as an embedded object
 					"plugin": {
-						Configuration: runtime.EmbeddedObject{Object: &AdmissionPluginTestConfig{}},
+						Configuration: &AdmissionPluginTestConfig{},
 					},
 				},
 				PluginOrderOverride: []string{"plugin"}, // explicitly set this field because it's omitempty
@@ -375,16 +376,16 @@ func TestMasterConfig(t *testing.T) {
 		EtcdConfig: &internal.EtcdConfig{},
 		OAuthConfig: &internal.OAuthConfig{
 			IdentityProviders: []internal.IdentityProvider{
-				{Provider: runtime.EmbeddedObject{Object: &internal.BasicAuthPasswordIdentityProvider{}}},
-				{Provider: runtime.EmbeddedObject{Object: &internal.AllowAllPasswordIdentityProvider{}}},
-				{Provider: runtime.EmbeddedObject{Object: &internal.DenyAllPasswordIdentityProvider{}}},
-				{Provider: runtime.EmbeddedObject{Object: &internal.HTPasswdPasswordIdentityProvider{}}},
-				{Provider: runtime.EmbeddedObject{Object: &internal.LDAPPasswordIdentityProvider{}}},
-				{Provider: runtime.EmbeddedObject{Object: &internal.RequestHeaderIdentityProvider{}}},
-				{Provider: runtime.EmbeddedObject{Object: &internal.KeystonePasswordIdentityProvider{}}},
-				{Provider: runtime.EmbeddedObject{Object: &internal.GitHubIdentityProvider{}}},
-				{Provider: runtime.EmbeddedObject{Object: &internal.GoogleIdentityProvider{}}},
-				{Provider: runtime.EmbeddedObject{Object: &internal.OpenIDIdentityProvider{}}},
+				{Provider: &internal.BasicAuthPasswordIdentityProvider{}},
+				{Provider: &internal.AllowAllPasswordIdentityProvider{}},
+				{Provider: &internal.DenyAllPasswordIdentityProvider{}},
+				{Provider: &internal.HTPasswdPasswordIdentityProvider{}},
+				{Provider: &internal.LDAPPasswordIdentityProvider{}},
+				{Provider: &internal.RequestHeaderIdentityProvider{}},
+				{Provider: &internal.KeystonePasswordIdentityProvider{}},
+				{Provider: &internal.GitHubIdentityProvider{}},
+				{Provider: &internal.GoogleIdentityProvider{}},
+				{Provider: &internal.OpenIDIdentityProvider{}},
 			},
 			SessionConfig: &internal.SessionConfig{},
 			Templates:     &internal.OAuthTemplates{},
@@ -396,7 +397,7 @@ func TestMasterConfig(t *testing.T) {
 		AdmissionConfig: internal.AdmissionConfig{
 			PluginConfig: map[string]internal.AdmissionPluginConfig{ // test config as an embedded object
 				"plugin": {
-					Configuration: runtime.EmbeddedObject{Object: &AdmissionPluginTestConfig{}},
+					Configuration: &AdmissionPluginTestConfig{},
 				},
 			},
 			PluginOrderOverride: []string{"plugin"}, // explicitly set this field because the it's omitempty
@@ -413,7 +414,7 @@ func TestMasterConfig(t *testing.T) {
 }
 
 func writeYAML(obj runtime.Object) ([]byte, error) {
-	json, err := Codec.Encode(obj)
+	json, err := runtime.Encode(api.Codecs.LegacyCodec(SchemeGroupVersion), obj)
 	if err != nil {
 		return nil, err
 	}

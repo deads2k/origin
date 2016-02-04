@@ -136,7 +136,7 @@ func TestDescribers(t *testing.T) {
 
 func TestDeploymentConfigDescriber(t *testing.T) {
 	config := deployapitest.OkDeploymentConfig(1)
-	deployment, _ := deployutil.MakeDeployment(config, kapi.Codec)
+	deployment, _ := deployutil.MakeDeployment(config, kapi.Codecs.LegacyCodec(deployapi.SchemeGroupVersion))
 	podList := &kapi.PodList{}
 	eventList := &kapi.EventList{}
 	deploymentList := &kapi.ReplicationControllerList{}

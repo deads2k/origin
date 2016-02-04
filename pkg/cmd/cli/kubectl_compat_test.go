@@ -19,6 +19,9 @@ import (
 var MissingCommands = sets.NewString("namespace", "rolling-update", "cluster-info", "api-versions",
 	"apply",     // we don't want to support this implementation
 	"autoscale", // TODO
+	"cordon",
+	"drain",
+	"uncordon",
 )
 
 // WhitelistedCommands is the list of commands we're never going to have in oc

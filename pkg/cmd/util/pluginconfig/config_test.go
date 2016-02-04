@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"k8s.io/kubernetes/pkg/api/unversioned"
-	"k8s.io/kubernetes/pkg/runtime"
 
 	oapi "github.com/openshift/origin/pkg/api"
 	"github.com/openshift/origin/pkg/api/v1"
@@ -19,7 +18,7 @@ type TestConfig struct {
 	Item2                []string `json:"item2"`
 }
 
-func (*TestConfig) IsAnAPIObject() {}
+func (*TestConfig) GetObjectKind() unversioned.ObjectKind { return nil }
 
 func TestGetPluginConfig(t *testing.T) {
 	api.Scheme.AddKnownTypes(oapi.SchemeGroupVersion, &TestConfig{})
@@ -31,10 +30,8 @@ func TestGetPluginConfig(t *testing.T) {
 	}
 
 	cfg := api.AdmissionPluginConfig{
-		Location: "/path/to/my/config",
-		Configuration: runtime.EmbeddedObject{
-			Object: testConfig,
-		},
+		Location:      "/path/to/my/config",
+		Configuration: testConfig,
 	}
 	fileName, err := GetPluginConfig(cfg)
 	if err != nil {

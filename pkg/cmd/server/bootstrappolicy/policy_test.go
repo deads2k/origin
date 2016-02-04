@@ -9,6 +9,7 @@ import (
 	"github.com/ghodss/yaml"
 
 	"k8s.io/kubernetes/pkg/api"
+	"k8s.io/kubernetes/pkg/runtime"
 	"k8s.io/kubernetes/pkg/util"
 
 	"github.com/openshift/origin/pkg/api/v1"
@@ -57,7 +58,7 @@ func testObjects(t *testing.T, list *api.List, fixtureFilename string) {
 		t.Fatal(err)
 	}
 
-	jsonData, err := v1.Codec.Encode(list)
+	jsonData, err := runtime.Encode(api.Codecs.LegacyCodec(v1.SchemeGroupVersion), list)
 	if err != nil {
 		t.Fatal(err)
 	}
