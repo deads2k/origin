@@ -19,7 +19,7 @@ function os::test::extended::clusterup::run_test () {
     export HOME="${test_home}"
     pushd "${HOME}" &> /dev/null
     os::log::info "Using ${HOME} as home directory"
-    ${funcname}
+    ${funcname} ${2}
     popd &> /dev/null
     export HOME="${global_home}"
 
@@ -106,8 +106,8 @@ function os::test::extended::clusterup::cleanup_func () {
 }
 
 function os::test::extended::clusterup::standard_test () {
-    local cmd="oc cluster up $@"
-    os::cmd::expect_success "${cmd}"
+    arg=$@
+    os::cmd::expect_success "oc cluster up $arg"
     os::test::extended::clusterup::verify_router_and_registry
     os::test::extended::clusterup::verify_image_streams
     os::test::extended::clusterup::verify_ruby_build
@@ -131,7 +131,8 @@ function os::test::extended::clusterup::internal::hostdirs () {
         --host-config-dir="${config_dir}" \
         --host-pv-dir="${pv_dir}" \
         ${volumes_arg} \
-        --version="$ORIGIN_COMMIT"
+        --version="$ORIGIN_COMMIT" \
+        ${@}
 
 	local sudo="${USE_SUDO:+sudo}"
     os::cmd::expect_success "${sudo} ls ${config_dir}/master/master-config.yaml"
@@ -141,7 +142,7 @@ function os::test::extended::clusterup::internal::hostdirs () {
 
 # Tests the simplest case, no arguments specified
 function os::test::extended::clusterup::noargs () {
-    os::test::extended::clusterup::standard_test "--version=$ORIGIN_COMMIT"
+    os::test::extended::clusterup::standard_test ${@}
 }
 
 # Tests creating a cluster with specific host directories
@@ -152,12 +153,13 @@ function os::test::extended::clusterup::hostdirs () {
     else
         base_dir="$(mktemp -d)"
     fi
-    BASE_DIR="${base_dir}" os::test::extended::clusterup::internal::hostdirs
+    BASE_DIR="${base_dir}" os::test::extended::clusterup::internal::hostdirs ${@}
 }
 
 # Tests bringing up the service catalog and provisioning a template
 function os::test::extended::clusterup::service_catalog() {
-    os::cmd::expect_success "oc cluster up --service-catalog --version=$ORIGIN_COMMIT"
+    arg=$@
+    os::cmd::expect_success "oc cluster up --service-catalog $arg"
     os::test::extended::clusterup::verify_router_and_registry
     os::test::extended::clusterup::verify_image_streams
     os::cmd::expect_success "oc login -u system:admin"
@@ -173,50 +175,12 @@ function os::test::extended::clusterup::service_catalog() {
     os::cmd::try_until_text "oc get pods" "Terminating" $(( 2*minute )) 1
 }
 
-
-
-# Tests creating a cluster with an alternate image and tag
-function os::test::extended::clusterup::image::ose3.3 () {
-    os::test::extended::clusterup::standard_test \
-        --image="registry.access.redhat.com/openshift3/ose" \
-        --version="v3.3"
-    os::cmd::expect_success_and_text "docker inspect -f '{{ .Config.Image }}' origin" "registry.access.redhat.com/openshift3/ose:v3.3"
-}
-
-# Tests creating a cluster with an alternate image and tag
-function os::test::extended::clusterup::image::ose3.4 () {
-    os::test::extended::clusterup::standard_test \
-        --image="registry.access.redhat.com/openshift3/ose" \
-        --version="v3.4"
-    os::cmd::expect_success_and_text "docker inspect -f '{{ .Config.Image }}' origin" "registry.access.redhat.com/openshift3/ose:v3.4"
-}
-
-# Tests creating a cluster with an alternate image and tag
-function os::test::extended::clusterup::image::ose3.5 () {
-    os::test::extended::clusterup::standard_test \
-        --image="registry.access.redhat.com/openshift3/ose" \
-        --version="v3.5"
-    os::cmd::expect_success_and_text "docker inspect -f '{{ .Config.Image }}' origin" "registry.access.redhat.com/openshift3/ose:v3.5"
-}
-
-# Tests creating a cluster with an alternate image and tag
-function os::test::extended::clusterup::image::ose3.6 () {
-    os::test::extended::clusterup::standard_test \
-        --image="registry.access.redhat.com/openshift3/ose" \
-        --version="v3.6"
-    os::cmd::expect_success_and_text "docker inspect -f '{{ .Config.Image }}' origin" "registry.access.redhat.com/openshift3/ose:v3.6"
-}
-
-# make sure the defaults (which will use the latest tagged origin release images) work.
-function os::test::extended::clusterup::default () {
-    os::test::extended::clusterup::standard_test
-}
-
 # Tests creating a cluster with a public hostname
 function os::test::extended::clusterup::publichostname () {
     os::test::extended::clusterup::standard_test \
         --public-hostname="myserver.127.0.0.1.nip.io" \
-        --version="$ORIGIN_COMMIT"
+        --version="$ORIGIN_COMMIT" \
+        ${@}
     os::cmd::expect_success_and_text "docker exec origin cat /var/lib/origin/openshift.local.config/master/master-config.yaml" "masterPublicURL.*myserver\.127\.0\.0\.1\.nip\.io"
 }
 
@@ -224,26 +188,28 @@ function os::test::extended::clusterup::publichostname () {
 function os::test::extended::clusterup::numerichostname () {
     os::test::extended::clusterup::standard_test \
         --public-hostname="127.0.0.1" \
-        --version="$ORIGIN_COMMIT"
+        --version="$ORIGIN_COMMIT" \
+        ${@}
     os::cmd::expect_success_and_text "docker exec origin cat /var/lib/origin/openshift.local.config/master/master-config.yaml" "masterPublicURL.*127\.0\.0\.1"
 }
 
 # Tests installation of metrics components
 function os::test::extended::clusterup::metrics () {
-    os::test::extended::clusterup::standard_test --metrics --version="$ORIGIN_COMMIT"
+    os::test::extended::clusterup::standard_test --metrics ${@}
     os::test::extended::clusterup::verify_metrics
 }
 
 # Tests installation of aggregated logging components
 function os::test::extended::clusterup::logging () {
-    os::test::extended::clusterup::standard_test --logging --version="$ORIGIN_COMMIT"
+    os::test::extended::clusterup::standard_test --logging ${@}
     os::test::extended::clusterup::verify_logging
 }
 
 # Verifies that a service can be accessed by a peer pod
 # and by the pod running the service
 function os::test::extended::clusterup::svcaccess () {
-    os::cmd::expect_success "oc cluster up --version=$ORIGIN_COMMIT"
+    arg=$@
+    os::cmd::expect_success "oc cluster up $arg"
     os::cmd::expect_success "oc create -f ${OS_ROOT}/examples/gitserver/gitserver-persistent.yaml"
 	os::cmd::try_until_text "oc get endpoints git -o jsonpath='{ .subsets[*].ports[?(@.port==8080)].port }'" "8080" $(( 10*minute )) 1
     # Test that a service can be accessed from a peer pod
@@ -260,7 +226,8 @@ function os::test::extended::clusterup::svcaccess () {
 function os::test::extended::clusterup::portinuse () {
     # Start listening on the host's 127.0.0.1 interface, port 53
     os::cmd::expect_success "docker run -d --name=port53 --entrypoint=/bin/bash --net=host openshift/origin-gitserver:latest -c \"socat TCP-LISTEN:53,bind=127.0.0.1,fork SYSTEM:'echo hello'\""
-    os::cmd::expect_success "oc cluster up --version=$ORIGIN_COMMIT"
+    arg=$@
+    os::cmd::expect_success "oc cluster up $arg"
 }
 
 function os::test::extended::clusterup::portinuse_cleanup () {
@@ -277,23 +244,23 @@ readonly default_tests=(
     "numerichostname"
     "portinuse"
     "svcaccess"
-
-# enable once https://github.com/openshift/origin/issues/16995 is fixed
-#    "default"
-# enable once https://github.com/openshift/origin/issues/16995 is fixed
-#    "image::ose3.3"
-# enable once https://github.com/openshift/origin/issues/16995 is fixed
-#    "image::ose3.4"
-# enable once https://github.com/openshift/origin/issues/16995 is fixed
-#    "image::ose3.5"
-
-    "image::ose3.6"
+    "default"
 
 # logging+metrics team needs to fix/enable these tests.
 #    "metrics"
 #    "logging"
 )
 
+# run each test with each of these set of additiona args.  Primarily
+# intended to run the tests against different cluster versions.
+readonly extra_args=(
+# TODO - switch this to 3.7 and turn it on, once 3.7 is available.
+# Fails with 3.6 right now because the SC wasn't supported for 3.6 with a 3.7 client.
+#    "--image=registry.access.redhat.com/openshift3/ose --version=v3.6"
+    "--image=docker.io/openshift/origin --version=v3.7.0-rc.0"
+    "--version=${ORIGIN_COMMIT}"
+    "--loglevel=2"  # can't be empty, so pass something benign
+)
 tests=("${1:-"${default_tests[@]}"}")
 
 ORIGIN_COMMIT=${ORIGIN_COMMIT:-latest}
@@ -303,11 +270,13 @@ echo "Running cluster up tests using tag $ORIGIN_COMMIT"
 # Ensure that KUBECONFIG is not set
 unset KUBECONFIG
 for test in "${tests[@]}"; do
+  for extra_arg in "${extra_args[@]}"; do
 	cleanup_func=$("os::test::extended::clusterup::cleanup_func" "${test}")
 	# trap "${cleanup_func}; os::test::extended::clusterup::junit_cleanup" EXIT
-    os::test::extended::clusterup::run_test "${test}"
+    os::test::extended::clusterup::run_test "${test}" "${extra_arg}"
     # trap - EXIT
 	${cleanup_func}
+  done
 done
 
 # os::test::extended::clusterup::junit_cleanup
