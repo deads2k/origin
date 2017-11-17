@@ -24,8 +24,10 @@ import (
 
 	"github.com/golang/glog"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apiserver/pkg/admission"
 	core "k8s.io/client-go/testing"
@@ -40,7 +42,7 @@ import (
 // newHandlerForTest returns a configured handler for testing.
 func newHandlerForTest(internalClient internalclientset.Interface) (admission.Interface, informers.SharedInformerFactory, error) {
 	f := informers.NewSharedInformerFactory(internalClient, 5*time.Minute)
-	handler, err := NewDefaultServicePlan()
+	handler, err := NewDefaultClusterServicePlan()
 	if err != nil {
 		return nil, f, err
 	}
@@ -51,32 +53,46 @@ func newHandlerForTest(internalClient internalclientset.Interface) (admission.In
 }
 
 // newFakeServiceCatalogClientForTest creates a fake clientset that returns a
-// ServiceClassList with the given ServiceClass as the single list item.
-func newFakeServiceCatalogClientForTest(sc *servicecatalog.ServiceClass, sps []*servicecatalog.ServicePlan) *fake.Clientset {
+// ClusterServiceClassList with the given ClusterServiceClass as the single list item
+// and list of ClusterServicePlan objects.
+// If classFilter is provided (as in not ""), then only sps with the
+// Spec.ClusterServiceClassRef.Name equaling that string will be added to the list.
+func newFakeServiceCatalogClientForTest(sc *servicecatalog.ClusterServiceClass, sps []*servicecatalog.ClusterServicePlan, classFilter string, useGet bool) *fake.Clientset {
 	fakeClient := &fake.Clientset{}
 
-	// react to the given service classes
-	scList := &servicecatalog.ServiceClassList{
-		ListMeta: metav1.ListMeta{
-			ResourceVersion: "1",
-		}}
-	if sc != nil {
-		scList.Items = append(scList.Items, *sc)
+	if useGet {
+		fakeClient.AddReactor("get", "clusterserviceclasses", func(action core.Action) (bool, runtime.Object, error) {
+			if sc != nil {
+				return true, sc, nil
+			}
+			return true, nil, apierrors.NewNotFound(schema.GroupResource{}, "")
+		})
+	} else {
+		// react to the given service class list
+		scList := &servicecatalog.ClusterServiceClassList{
+			ListMeta: metav1.ListMeta{
+				ResourceVersion: "1",
+			}}
+		if sc != nil {
+			scList.Items = append(scList.Items, *sc)
+		}
+
+		fakeClient.AddReactor("list", "clusterserviceclasses", func(action core.Action) (bool, runtime.Object, error) {
+			return true, scList, nil
+		})
 	}
 
-	fakeClient.AddReactor("list", "serviceclasses", func(action core.Action) (bool, runtime.Object, error) {
-		return true, scList, nil
-	})
-
 	// react to the given plans
-	spList := &servicecatalog.ServicePlanList{
+	spList := &servicecatalog.ClusterServicePlanList{
 		ListMeta: metav1.ListMeta{
 			ResourceVersion: "1",
 		}}
 	for _, sp := range sps {
-		spList.Items = append(spList.Items, *sp)
+		if classFilter == "" || classFilter == sp.Spec.ClusterServiceClassRef.Name {
+			spList.Items = append(spList.Items, *sp)
+		}
 	}
-	fakeClient.AddReactor("list", "serviceplans", func(action core.Action) (bool, runtime.Object, error) {
+	fakeClient.AddReactor("list", "clusterserviceplans", func(action core.Action) (bool, runtime.Object, error) {
 		return true, spList, nil
 	})
 
@@ -90,13 +106,13 @@ func newServiceInstance(namespace string) servicecatalog.ServiceInstance {
 	}
 }
 
-// newServiceClass returns a new serviceclass.
-func newServiceClass(id string, name string) *servicecatalog.ServiceClass {
-	sc := &servicecatalog.ServiceClass{
+// newClusterServiceClass returns a new serviceclass.
+func newClusterServiceClass(id string, name string) *servicecatalog.ClusterServiceClass {
+	sc := &servicecatalog.ClusterServiceClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: id,
 		},
-		Spec: servicecatalog.ServiceClassSpec{
+		Spec: servicecatalog.ClusterServiceClassSpec{
 			ExternalID:   id,
 			ExternalName: name,
 		},
@@ -104,39 +120,48 @@ func newServiceClass(id string, name string) *servicecatalog.ServiceClass {
 	return sc
 }
 
-// newServiceClass returns a new serviceclass.
-func newServicePlans(count uint) []*servicecatalog.ServicePlan {
-	sp1 := &servicecatalog.ServicePlan{
+// newClusterServicePlans returns new serviceplans.
+func newClusterServicePlans(count uint, useDifferentClasses bool) []*servicecatalog.ClusterServicePlan {
+	classname := "test-serviceclass"
+	sp1 := &servicecatalog.ClusterServicePlan{
 		ObjectMeta: metav1.ObjectMeta{Name: "bar-id"},
-		Spec: servicecatalog.ServicePlanSpec{
+		Spec: servicecatalog.ClusterServicePlanSpec{
 			ExternalName: "bar",
 			ExternalID:   "12345",
+			ClusterServiceClassRef: servicecatalog.ClusterObjectReference{
+				Name: classname,
+			},
 		},
 	}
-
-	sp2 := &servicecatalog.ServicePlan{
+	if useDifferentClasses {
+		classname = "different-serviceclass"
+	}
+	sp2 := &servicecatalog.ClusterServicePlan{
 		ObjectMeta: metav1.ObjectMeta{Name: "baz-id"},
-		Spec: servicecatalog.ServicePlanSpec{
+		Spec: servicecatalog.ClusterServicePlanSpec{
 			ExternalName: "baz",
 			ExternalID:   "23456",
+			ClusterServiceClassRef: servicecatalog.ClusterObjectReference{
+				Name: classname,
+			},
 		},
 	}
 
 	if 0 == count {
-		return []*servicecatalog.ServicePlan{}
+		return []*servicecatalog.ClusterServicePlan{}
 	}
 	if 1 == count {
-		return []*servicecatalog.ServicePlan{sp1}
+		return []*servicecatalog.ClusterServicePlan{sp1}
 	}
 	if 2 == count {
-		return []*servicecatalog.ServicePlan{sp1, sp2}
+		return []*servicecatalog.ClusterServicePlan{sp1, sp2}
 	}
-	return []*servicecatalog.ServicePlan{}
+	return []*servicecatalog.ClusterServicePlan{}
 }
 
 func TestWithListFailure(t *testing.T) {
 	fakeClient := &fake.Clientset{}
-	fakeClient.AddReactor("list", "serviceclasses", func(action core.Action) (bool, runtime.Object, error) {
+	fakeClient.AddReactor("list", "clusterserviceclasses", func(action core.Action) (bool, runtime.Object, error) {
 		return true, nil, fmt.Errorf("simulated test failure")
 	})
 	handler, informerFactory, err := newHandlerForTest(fakeClient)
@@ -146,18 +171,21 @@ func TestWithListFailure(t *testing.T) {
 	informerFactory.Start(wait.NeverStop)
 
 	instance := newServiceInstance("dummy")
-	instance.Spec.ExternalServiceClassName = "foo"
+	instance.Spec.ClusterServiceClassExternalName = "foo"
 
 	err = handler.Admit(admission.NewAttributesRecord(&instance, nil, servicecatalog.Kind("ServiceInstance").WithVersion("version"), instance.Namespace, instance.Name, servicecatalog.Resource("serviceinstances").WithVersion("version"), "", admission.Create, nil))
 	if err == nil {
-		t.Errorf("unexpected success with no ServiceClasses.List succeeding")
+		t.Errorf("unexpected success with no ClusterServiceClasses.List succeeding")
 	} else if !strings.Contains(err.Error(), "simulated test failure") {
 		t.Errorf("did not find expected error, got %q", err)
 	}
+	assertPlanReference(t,
+		servicecatalog.PlanReference{ClusterServiceClassExternalName: "foo"},
+		instance.Spec.PlanReference)
 }
 
 func TestWithPlanWorks(t *testing.T) {
-	fakeClient := newFakeServiceCatalogClientForTest(nil, newServicePlans(1))
+	fakeClient := newFakeServiceCatalogClientForTest(nil, newClusterServicePlans(1, false), "", false /* do not use get */)
 	handler, informerFactory, err := newHandlerForTest(fakeClient)
 	if err != nil {
 		t.Errorf("unexpected error initializing handler: %v", err)
@@ -165,8 +193,8 @@ func TestWithPlanWorks(t *testing.T) {
 	informerFactory.Start(wait.NeverStop)
 
 	instance := newServiceInstance("dummy")
-	instance.Spec.ExternalServiceClassName = "foo"
-	instance.Spec.ExternalServicePlanName = "bar"
+	instance.Spec.ClusterServiceClassExternalName = "foo"
+	instance.Spec.ClusterServicePlanExternalName = "bar"
 
 	err = handler.Admit(admission.NewAttributesRecord(&instance, nil, servicecatalog.Kind("ServiceInstance").WithVersion("version"), instance.Namespace, instance.Name, servicecatalog.Resource("serviceinstances").WithVersion("version"), "", admission.Create, nil))
 	if err != nil {
@@ -176,10 +204,13 @@ func TestWithPlanWorks(t *testing.T) {
 		}
 		t.Errorf("unexpected error %q returned from admission handler: %v", err, actions)
 	}
+	assertPlanReference(t,
+		servicecatalog.PlanReference{ClusterServiceClassExternalName: "foo", ClusterServicePlanExternalName: "bar"},
+		instance.Spec.PlanReference)
 }
 
-func TestWithNoPlanFailsWithNoServiceClass(t *testing.T) {
-	fakeClient := newFakeServiceCatalogClientForTest(nil, newServicePlans(1))
+func TestWithNoPlanFailsWithNoClusterServiceClass(t *testing.T) {
+	fakeClient := newFakeServiceCatalogClientForTest(nil, newClusterServicePlans(1, false), "", false /* do not use get */)
 	handler, informerFactory, err := newHandlerForTest(fakeClient)
 	if err != nil {
 		t.Errorf("unexpected error initializing handler: %v", err)
@@ -187,7 +218,7 @@ func TestWithNoPlanFailsWithNoServiceClass(t *testing.T) {
 	informerFactory.Start(wait.NeverStop)
 
 	instance := newServiceInstance("dummy")
-	instance.Spec.ExternalServiceClassName = "foobar"
+	instance.Spec.ClusterServiceClassExternalName = "foobar"
 
 	err = handler.Admit(admission.NewAttributesRecord(&instance, nil, servicecatalog.Kind("ServiceInstance").WithVersion("version"), instance.Namespace, instance.Name, servicecatalog.Resource("serviceinstances").WithVersion("version"), "", admission.Create, nil))
 	if err == nil {
@@ -195,14 +226,17 @@ func TestWithNoPlanFailsWithNoServiceClass(t *testing.T) {
 	} else if !strings.Contains(err.Error(), "does not exist, can not figure") {
 		t.Errorf("did not find expected error, got %q", err)
 	}
+	assertPlanReference(t,
+		servicecatalog.PlanReference{ClusterServiceClassExternalName: "foobar"},
+		instance.Spec.PlanReference)
 }
 
 // checks that the defaulting action works when a service class only provides a single plan.
 func TestWithNoPlanWorksWithSinglePlan(t *testing.T) {
-	sc := newServiceClass("foo-id", "foo")
-	sps := newServicePlans(1)
+	sc := newClusterServiceClass("foo-id", "foo")
+	sps := newClusterServicePlans(1, false)
 	glog.V(4).Infof("Created Service as %+v", sc)
-	fakeClient := newFakeServiceCatalogClientForTest(sc, sps)
+	fakeClient := newFakeServiceCatalogClientForTest(sc, sps, "", false /* do not use get */)
 
 	handler, informerFactory, err := newHandlerForTest(fakeClient)
 	if err != nil {
@@ -211,7 +245,7 @@ func TestWithNoPlanWorksWithSinglePlan(t *testing.T) {
 	informerFactory.Start(wait.NeverStop)
 
 	instance := newServiceInstance("dummy")
-	instance.Spec.ExternalServiceClassName = "foo"
+	instance.Spec.ClusterServiceClassExternalName = "foo"
 
 	err = handler.Admit(admission.NewAttributesRecord(&instance, nil, servicecatalog.Kind("ServiceInstance").WithVersion("version"), instance.Namespace, instance.Name, servicecatalog.Resource("serviceinstances").WithVersion("version"), "", admission.Create, nil))
 	if err != nil {
@@ -221,18 +255,17 @@ func TestWithNoPlanWorksWithSinglePlan(t *testing.T) {
 		}
 		t.Errorf("unexpected error %q returned from admission handler: %v", err, actions)
 	}
-	// Make sure the ServiceInstance has been mutated to include the service plan name
-	if instance.Spec.ExternalServicePlanName != "bar" {
-		t.Errorf("PlanName was not modified for the default plan")
-	}
+	assertPlanReference(t,
+		servicecatalog.PlanReference{ClusterServiceClassExternalName: "foo", ClusterServicePlanExternalName: "bar"},
+		instance.Spec.PlanReference)
 }
 
 // checks that defaulting fails when there are multiple plans to choose from.
 func TestWithNoPlanFailsWithMultiplePlans(t *testing.T) {
-	sc := newServiceClass("foo-id", "foo")
-	sps := newServicePlans(2)
+	sc := newClusterServiceClass("foo-id", "foo")
+	sps := newClusterServicePlans(2, false)
 	glog.V(4).Infof("Created Service as %+v", sc)
-	fakeClient := newFakeServiceCatalogClientForTest(sc, sps)
+	fakeClient := newFakeServiceCatalogClientForTest(sc, sps, "", false /* do not use get */)
 	handler, informerFactory, err := newHandlerForTest(fakeClient)
 	if err != nil {
 		t.Errorf("unexpected error initializing handler: %v", err)
@@ -240,7 +273,7 @@ func TestWithNoPlanFailsWithMultiplePlans(t *testing.T) {
 	informerFactory.Start(wait.NeverStop)
 
 	instance := newServiceInstance("dummy")
-	instance.Spec.ExternalServiceClassName = "foo"
+	instance.Spec.ClusterServiceClassExternalName = "foo"
 
 	err = handler.Admit(admission.NewAttributesRecord(&instance, nil, servicecatalog.Kind("ServiceInstance").WithVersion("version"), instance.Namespace, instance.Name, servicecatalog.Resource("serviceinstances").WithVersion("version"), "", admission.Create, nil))
 	if err == nil {
@@ -248,5 +281,153 @@ func TestWithNoPlanFailsWithMultiplePlans(t *testing.T) {
 		return
 	} else if !strings.Contains(err.Error(), "has more than one plan, PlanName must be") {
 		t.Errorf("did not find expected error, got %q", err)
+	}
+	assertPlanReference(t,
+		servicecatalog.PlanReference{ClusterServiceClassExternalName: "foo"},
+		instance.Spec.PlanReference)
+}
+
+// checks that defaulting succeeds when there are multiple plans but only a
+// single plan for the specified Service Class
+func TestWithNoPlanSucceedsWithMultiplePlansFromDifferentClasses(t *testing.T) {
+	sc := newClusterServiceClass("foo-id", "foo")
+	sps := newClusterServicePlans(2, true)
+	glog.V(4).Infof("Created Service as %+v", sc)
+	classFilter := "test-serviceclass"
+	fakeClient := newFakeServiceCatalogClientForTest(sc, sps, classFilter, false /* do not use get */)
+	handler, informerFactory, err := newHandlerForTest(fakeClient)
+	if err != nil {
+		t.Errorf("unexpected error initializing handler: %v", err)
+	}
+	informerFactory.Start(wait.NeverStop)
+
+	instance := newServiceInstance("dummy")
+	instance.Spec.ClusterServiceClassExternalName = "foo"
+
+	err = handler.Admit(admission.NewAttributesRecord(&instance, nil, servicecatalog.Kind("ServiceInstance").WithVersion("version"), instance.Namespace, instance.Name, servicecatalog.Resource("serviceinstances").WithVersion("version"), "", admission.Create, nil))
+	if err != nil {
+		actions := ""
+		for _, action := range fakeClient.Actions() {
+			actions = actions + action.GetVerb() + ":" + action.GetResource().Resource + ":" + action.GetSubresource() + ", "
+		}
+		t.Errorf("unexpected error %q returned from admission handler: %v", err, actions)
+	}
+	assertPlanReference(t,
+		servicecatalog.PlanReference{ClusterServiceClassExternalName: "foo", ClusterServicePlanExternalName: "bar"},
+		instance.Spec.PlanReference)
+}
+
+func TestWithNoPlanFailsWithNoClusterServiceClassK8SName(t *testing.T) {
+	fakeClient := newFakeServiceCatalogClientForTest(nil, newClusterServicePlans(1, false), "", true /* use get */)
+	handler, informerFactory, err := newHandlerForTest(fakeClient)
+	if err != nil {
+		t.Errorf("unexpected error initializing handler: %v", err)
+	}
+	informerFactory.Start(wait.NeverStop)
+
+	instance := newServiceInstance("dummy")
+	instance.Spec.ClusterServiceClassName = "foobar-id"
+
+	err = handler.Admit(admission.NewAttributesRecord(&instance, nil, servicecatalog.Kind("ServiceInstance").WithVersion("version"), instance.Namespace, instance.Name, servicecatalog.Resource("serviceinstances").WithVersion("version"), "", admission.Create, nil))
+	if err == nil {
+		t.Errorf("unexpected success with no plan specified and no serviceclass existing")
+	} else if !strings.Contains(err.Error(), "does not exist, can not figure") {
+		t.Errorf("did not find expected error, got %q", err)
+	}
+	assertPlanReference(t,
+		servicecatalog.PlanReference{ClusterServiceClassName: "foobar-id"},
+		instance.Spec.PlanReference)
+}
+
+// checks that the defaulting action works when a service class only provides a single plan.
+func TestWithNoPlanWorksWithSinglePlanK8SName(t *testing.T) {
+	sc := newClusterServiceClass("foo-id", "foo")
+	sps := newClusterServicePlans(1, false)
+	glog.V(4).Infof("Created Service as %+v", sc)
+	fakeClient := newFakeServiceCatalogClientForTest(sc, sps, "", true /* use get */)
+
+	handler, informerFactory, err := newHandlerForTest(fakeClient)
+	if err != nil {
+		t.Errorf("unexpected error initializing handler: %v", err)
+	}
+	informerFactory.Start(wait.NeverStop)
+
+	instance := newServiceInstance("dummy")
+	instance.Spec.ClusterServiceClassName = "foo-id"
+
+	err = handler.Admit(admission.NewAttributesRecord(&instance, nil, servicecatalog.Kind("ServiceInstance").WithVersion("version"), instance.Namespace, instance.Name, servicecatalog.Resource("serviceinstances").WithVersion("version"), "", admission.Create, nil))
+	if err != nil {
+		actions := ""
+		for _, action := range fakeClient.Actions() {
+			actions = actions + action.GetVerb() + ":" + action.GetResource().Resource + ":" + action.GetSubresource() + ", "
+		}
+		t.Errorf("unexpected error %q returned from admission handler: %v", err, actions)
+	}
+	assertPlanReference(t,
+		servicecatalog.PlanReference{ClusterServiceClassName: "foo-id", ClusterServicePlanName: "bar-id"},
+		instance.Spec.PlanReference)
+}
+
+// checks that defaulting fails when there are multiple plans to choose from.
+func TestWithNoPlanFailsWithMultiplePlansK8SName(t *testing.T) {
+	sc := newClusterServiceClass("foo-id", "foo")
+	sps := newClusterServicePlans(2, false)
+	glog.V(4).Infof("Created Service as %+v", sc)
+	fakeClient := newFakeServiceCatalogClientForTest(sc, sps, "", true /* use get */)
+	handler, informerFactory, err := newHandlerForTest(fakeClient)
+	if err != nil {
+		t.Errorf("unexpected error initializing handler: %v", err)
+	}
+	informerFactory.Start(wait.NeverStop)
+
+	instance := newServiceInstance("dummy")
+	instance.Spec.ClusterServiceClassName = "foo-id"
+
+	err = handler.Admit(admission.NewAttributesRecord(&instance, nil, servicecatalog.Kind("ServiceInstance").WithVersion("version"), instance.Namespace, instance.Name, servicecatalog.Resource("serviceinstances").WithVersion("version"), "", admission.Create, nil))
+	if err == nil {
+		t.Errorf("unexpected success with no plan specified and no serviceclass existing")
+		return
+	} else if !strings.Contains(err.Error(), "has more than one plan, PlanName must be") {
+		t.Errorf("did not find expected error, got %q", err)
+	}
+	assertPlanReference(t,
+		servicecatalog.PlanReference{ClusterServiceClassName: "foo-id"},
+		instance.Spec.PlanReference)
+}
+
+// checks that defaulting succeeds when there are multiple plans but only a
+// single plan for the specified Service Class
+func TestWithNoPlanSucceedsWithMultiplePlansFromDifferentClassesK8SName(t *testing.T) {
+	sc := newClusterServiceClass("foo-id", "foo")
+	sps := newClusterServicePlans(2, true)
+	glog.V(4).Infof("Created Service as %+v", sc)
+	classFilter := "test-serviceclass"
+	fakeClient := newFakeServiceCatalogClientForTest(sc, sps, classFilter, true /* use get */)
+	handler, informerFactory, err := newHandlerForTest(fakeClient)
+	if err != nil {
+		t.Errorf("unexpected error initializing handler: %v", err)
+	}
+	informerFactory.Start(wait.NeverStop)
+
+	instance := newServiceInstance("dummy")
+	instance.Spec.ClusterServiceClassName = "foo-id"
+
+	err = handler.Admit(admission.NewAttributesRecord(&instance, nil, servicecatalog.Kind("ServiceInstance").WithVersion("version"), instance.Namespace, instance.Name, servicecatalog.Resource("serviceinstances").WithVersion("version"), "", admission.Create, nil))
+	if err != nil {
+		actions := ""
+		for _, action := range fakeClient.Actions() {
+			actions = actions + action.GetVerb() + ":" + action.GetResource().Resource + ":" + action.GetSubresource() + ", "
+		}
+		t.Errorf("unexpected error %q returned from admission handler: %v", err, actions)
+	}
+	assertPlanReference(t,
+		servicecatalog.PlanReference{ClusterServiceClassName: "foo-id", ClusterServicePlanName: "bar-id"},
+		instance.Spec.PlanReference)
+}
+
+// Compares expected and actual PlanReferences and reports with Errorf of any mismatch
+func assertPlanReference(t *testing.T, expected servicecatalog.PlanReference, actual servicecatalog.PlanReference) {
+	if expected != actual {
+		t.Errorf("PlanReference was not as expected: %+v actual: %+v", expected, actual)
 	}
 }

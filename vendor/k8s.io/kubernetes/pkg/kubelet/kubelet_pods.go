@@ -52,6 +52,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/cm"
 	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
 	"k8s.io/kubernetes/pkg/kubelet/envvars"
+	"k8s.io/kubernetes/pkg/kubelet/eviction"
 	"k8s.io/kubernetes/pkg/kubelet/images"
 	"k8s.io/kubernetes/pkg/kubelet/server/portforward"
 	remotecommandserver "k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
@@ -743,12 +744,48 @@ func (kl *Kubelet) podIsTerminated(pod *v1.Pod) bool {
 	return status.Phase == v1.PodFailed || status.Phase == v1.PodSucceeded || (pod.DeletionTimestamp != nil && notRunning(status.ContainerStatuses))
 }
 
+// IsPodTerminated returns trus if the pod with the provided UID is in a terminated state ("Failed" or "Succeeded")
+// or if the pod has been deleted or removed
+func (kl *Kubelet) IsPodTerminated(uid types.UID) bool {
+	pod, podFound := kl.podManager.GetPodByUID(uid)
+	if !podFound {
+		return true
+	}
+	return kl.podIsTerminated(pod)
+}
+
+// IsPodDeleted returns true if the pod is deleted.  For the pod to be deleted, either:
+// 1. The pod object is deleted
+// 2. The pod's status is evicted
+// 3. The pod's deletion timestamp is set, and containers are not running
+func (kl *Kubelet) IsPodDeleted(uid types.UID) bool {
+	pod, podFound := kl.podManager.GetPodByUID(uid)
+	if !podFound {
+		return true
+	}
+	status, statusFound := kl.statusManager.GetPodStatus(pod.UID)
+	if !statusFound {
+		status = pod.Status
+	}
+	return eviction.PodIsEvicted(status) || (pod.DeletionTimestamp != nil && notRunning(status.ContainerStatuses))
+}
+
 // PodResourcesAreReclaimed returns true if all required node-level resources that a pod was consuming have
 // been reclaimed by the kubelet.  Reclaiming resources is a prerequisite to deleting a pod from the API server.
 func (kl *Kubelet) PodResourcesAreReclaimed(pod *v1.Pod, status v1.PodStatus) bool {
 	if !notRunning(status.ContainerStatuses) {
 		// We shouldnt delete pods that still have running containers
 		glog.V(3).Infof("Pod %q is terminated, but some containers are still running", format.Pod(pod))
+		return false
+	}
+	// pod's containers should be deleted
+	runtimeStatus, err := kl.podCache.Get(pod.UID)
+	if err != nil {
+		glog.V(3).Infof("Pod %q is terminated, Error getting runtimeStatus from the podCache: %s", format.Pod(pod), err)
+		return false
+	}
+	if len(runtimeStatus.ContainerStatuses) > 0 {
+		glog.V(3).Infof("Pod %q is terminated, but some containers have not been cleaned up: %+v", format.Pod(pod), runtimeStatus.ContainerStatuses)
 		return false
 	}
 	if kl.podVolumesExist(pod.UID) && !kl.kubeletConfiguration.KeepTerminatedPodVolumes {
@@ -1241,16 +1278,21 @@ func (kl *Kubelet) convertStatusToAPIStatus(pod *v1.Pod, podStatus *kubecontaine
 	// set status for Pods created on versions of kube older than 1.6
 	apiPodStatus.QOSClass = v1qos.GetPodQOS(pod)
 
+	oldPodStatus, found := kl.statusManager.GetPodStatus(pod.UID)
+	if !found {
+		oldPodStatus = pod.Status
+	}
+
 	apiPodStatus.ContainerStatuses = kl.convertToAPIContainerStatuses(
 		pod, podStatus,
-		pod.Status.ContainerStatuses,
+		oldPodStatus.ContainerStatuses,
 		pod.Spec.Containers,
 		len(pod.Spec.InitContainers) > 0,
 		false,
 	)
 	apiPodStatus.InitContainerStatuses = kl.convertToAPIContainerStatuses(
 		pod, podStatus,
-		pod.Status.InitContainerStatuses,
+		oldPodStatus.InitContainerStatuses,
 		pod.Spec.InitContainers,
 		len(pod.Spec.InitContainers) > 0,
 		true,
@@ -1317,7 +1359,7 @@ func (kl *Kubelet) convertToAPIContainerStatuses(pod *v1.Pod, podStatus *kubecon
 		}
 		oldStatus, found := oldStatuses[container.Name]
 		if found {
-			if isInitContainer && oldStatus.State.Terminated != nil {
+			if oldStatus.State.Terminated != nil {
 				// Do not update status on terminated init containers as
 				// they be removed at any time.
 				status = &oldStatus

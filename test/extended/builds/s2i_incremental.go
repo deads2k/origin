@@ -21,8 +21,8 @@ var _ = g.Describe("[Feature:Builds][Slow] incremental s2i build", func() {
 	)
 
 	var (
-		templateFixture      = exutil.FixturePath("testdata", "incremental-auth-build.json")
-		podAndServiceFixture = exutil.FixturePath("testdata", "test-build-podsvc.json")
+		templateFixture      = exutil.FixturePath("testdata", "builds", "incremental-auth-build.json")
+		podAndServiceFixture = exutil.FixturePath("testdata", "builds", "test-build-podsvc.json")
 		oc                   = exutil.NewCLI("build-sti-inc", exutil.KubeConfigPath())
 	)
 
@@ -62,6 +62,10 @@ var _ = g.Describe("[Feature:Builds][Slow] incremental s2i build", func() {
 
 				g.By("instantiating a pod and service with the new image")
 				err = oc.Run("new-app").Args("-f", podAndServiceFixture, "-p", "IMAGE_NAME="+imageName).Execute()
+				o.Expect(err).NotTo(o.HaveOccurred())
+
+				g.By("waiting for the pod to be running")
+				err = e2e.WaitForPodNameRunningInNamespace(oc.KubeFramework().ClientSet, "build-test-pod", oc.Namespace())
 				o.Expect(err).NotTo(o.HaveOccurred())
 
 				g.By("waiting for the service to become available")

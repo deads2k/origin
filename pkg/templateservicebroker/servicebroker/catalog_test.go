@@ -9,26 +9,27 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	templateapi "github.com/openshift/origin/pkg/template/apis/template"
+	templateapiv1 "github.com/openshift/origin/pkg/template/apis/template/v1"
 	"github.com/openshift/origin/pkg/templateservicebroker/openservicebroker/api"
 )
 
 func TestServiceFromTemplate(t *testing.T) {
-	template := &templateapi.Template{
+	template := &templateapiv1.Template{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "name",
 			UID:  "ee33151d-a34d-442d-a0ca-6353b73a58fd",
 			Annotations: map[string]string{
 				"description": "description",
 				"tags":        "tag1,tag2",
-				"openshift.io/display-name":                   "displayName",
-				"iconClass":                                   "iconClass",
-				"template.openshift.io/long-description":      "longDescription",
-				"template.openshift.io/provider-display-name": "providerDisplayName",
-				"template.openshift.io/documentation-url":     "documentationURL",
-				"template.openshift.io/support-url":           "supportURL",
+				"openshift.io/display-name":          "displayName",
+				"iconClass":                          "iconClass",
+				"openshift.io/long-description":      "longDescription",
+				"openshift.io/provider-display-name": "providerDisplayName",
+				"openshift.io/documentation-url":     "documentationURL",
+				"openshift.io/support-url":           "supportURL",
 			},
 		},
-		Parameters: []templateapi.Parameter{
+		Parameters: []templateapiv1.Parameter{
 			{
 				Name:     "param1",
 				Required: true,
@@ -55,12 +56,12 @@ func TestServiceFromTemplate(t *testing.T) {
 		Tags:        []string{"tag1", "tag2"},
 		Bindable:    true,
 		Metadata: map[string]interface{}{
-			"providerDisplayName":            "providerDisplayName",
-			"documentationUrl":               "documentationURL",
 			"supportUrl":                     "supportURL",
 			"displayName":                    "displayName",
-			"console.openshift.io/iconClass": "iconClass",
 			"longDescription":                "longDescription",
+			"providerDisplayName":            "providerDisplayName",
+			"documentationUrl":               "documentationURL",
+			"console.openshift.io/iconClass": "iconClass",
 		},
 		Plans: []api.Plan{
 			{
@@ -131,12 +132,19 @@ func TestServiceFromTemplate(t *testing.T) {
 	service := serviceFromTemplate(template)
 
 	if !reflect.DeepEqual(service, expectedService) {
-		t.Error("service did not match expectedService")
+		t.Errorf("service did not match expectedService.  Got:\n %#v\nExpected:\n%#v\n", service, expectedService)
 	}
 
 	template.Annotations["description"] = ""
+	template.Annotations[templateapi.BindableAnnotation] = "False"
 	service = serviceFromTemplate(template)
 	if service.Description != noDescriptionProvided {
 		t.Errorf("service.Description incorrectly set to %q", service.Description)
+	}
+	if service.Bindable {
+		t.Errorf("service.Bindable incorrectly set")
+	}
+	if service.Plans[0].Bindable {
+		t.Errorf("service.Plans[0].Bindable incorrectly set")
 	}
 }

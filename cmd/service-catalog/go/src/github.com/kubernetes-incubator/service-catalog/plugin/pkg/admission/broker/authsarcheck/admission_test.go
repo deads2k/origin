@@ -26,11 +26,10 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authentication/user"
 
+	authorizationapi "k8s.io/api/authorization/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	kubefake "k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/pkg/api/v1"
-	authorizationapi "k8s.io/client-go/pkg/apis/authorization/v1"
 	core "k8s.io/client-go/testing"
 
 	"github.com/kubernetes-incubator/service-catalog/pkg/apis/servicecatalog"
@@ -79,17 +78,17 @@ func TestAdmissionBroker(t *testing.T) {
 	// allowed: flag for whether or not the broker should be admitted
 	cases := []struct {
 		name     string
-		broker   *servicecatalog.ServiceBroker
+		broker   *servicecatalog.ClusterServiceBroker
 		userInfo *user.DefaultInfo
 		allowed  bool
 	}{
 		{
 			name: "broker with no auth",
-			broker: &servicecatalog.ServiceBroker{
+			broker: &servicecatalog.ClusterServiceBroker{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-broker",
 				},
-				Spec: servicecatalog.ServiceBrokerSpec{
+				Spec: servicecatalog.ClusterServiceBrokerSpec{
 					URL: "http://example.com",
 				},
 			},
@@ -101,15 +100,15 @@ func TestAdmissionBroker(t *testing.T) {
 		},
 		{
 			name: "broker with basic auth, user authenticated",
-			broker: &servicecatalog.ServiceBroker{
+			broker: &servicecatalog.ClusterServiceBroker{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-broker",
 				},
-				Spec: servicecatalog.ServiceBrokerSpec{
+				Spec: servicecatalog.ClusterServiceBrokerSpec{
 					URL: "http://example.com",
 					AuthInfo: &servicecatalog.ServiceBrokerAuthInfo{
 						Basic: &servicecatalog.BasicAuthConfig{
-							SecretRef: &v1.ObjectReference{
+							SecretRef: &servicecatalog.ObjectReference{
 								Namespace: "test-ns",
 								Name:      "test-secret",
 							},
@@ -124,38 +123,16 @@ func TestAdmissionBroker(t *testing.T) {
 			allowed: true,
 		},
 		{
-			name: "broker with basic auth, user authenticated (deprecated authinfo field)",
-			broker: &servicecatalog.ServiceBroker{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-broker",
-				},
-				Spec: servicecatalog.ServiceBrokerSpec{
-					URL: "http://example.com",
-					AuthInfo: &servicecatalog.ServiceBrokerAuthInfo{
-						BasicAuthSecret: &v1.ObjectReference{
-							Namespace: "test-ns",
-							Name:      "test-secret",
-						},
-					},
-				},
-			},
-			userInfo: &user.DefaultInfo{
-				Name:   "system:serviceaccount:test-ns:catalog",
-				Groups: []string{"system:serviceaccount", "system:serviceaccounts:test-ns"},
-			},
-			allowed: true,
-		},
-		{
 			name: "broker with bearer token, user authenticated",
-			broker: &servicecatalog.ServiceBroker{
+			broker: &servicecatalog.ClusterServiceBroker{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-broker",
 				},
-				Spec: servicecatalog.ServiceBrokerSpec{
+				Spec: servicecatalog.ClusterServiceBrokerSpec{
 					URL: "http://example.com",
 					AuthInfo: &servicecatalog.ServiceBrokerAuthInfo{
 						Bearer: &servicecatalog.BearerTokenAuthConfig{
-							SecretRef: &v1.ObjectReference{
+							SecretRef: &servicecatalog.ObjectReference{
 								Namespace: "test-ns",
 								Name:      "test-secret",
 							},
@@ -171,15 +148,15 @@ func TestAdmissionBroker(t *testing.T) {
 		},
 		{
 			name: "broker with bearer token, unauthenticated user",
-			broker: &servicecatalog.ServiceBroker{
+			broker: &servicecatalog.ClusterServiceBroker{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-broker",
 				},
-				Spec: servicecatalog.ServiceBrokerSpec{
+				Spec: servicecatalog.ClusterServiceBrokerSpec{
 					URL: "http://example.com",
 					AuthInfo: &servicecatalog.ServiceBrokerAuthInfo{
 						Bearer: &servicecatalog.BearerTokenAuthConfig{
-							SecretRef: &v1.ObjectReference{
+							SecretRef: &servicecatalog.ObjectReference{
 								Namespace: "test-ns",
 								Name:      "test-secret",
 							},
@@ -203,7 +180,7 @@ func TestAdmissionBroker(t *testing.T) {
 		}
 		kubeInformerFactory.Start(wait.NeverStop)
 
-		err = handler.Admit(admission.NewAttributesRecord(tc.broker, nil, servicecatalog.Kind("ServiceBroker").WithVersion("version"), tc.broker.Namespace, tc.broker.Name, servicecatalog.Resource("servicebrokers").WithVersion("version"), "", admission.Create, tc.userInfo))
+		err = handler.Admit(admission.NewAttributesRecord(tc.broker, nil, servicecatalog.Kind("ClusterServiceBroker").WithVersion("version"), tc.broker.Namespace, tc.broker.Name, servicecatalog.Resource("clusterservicebrokers").WithVersion("version"), "", admission.Create, tc.userInfo))
 		if err != nil && tc.allowed || err == nil && !tc.allowed {
 			t.Errorf("Create test '%s' reports: Unexpected error returned from admission handler: %v", tc.name, err)
 		}

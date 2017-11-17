@@ -1872,6 +1872,27 @@ items:
     - get
     - list
   - apiGroups:
+    - extensions
+    resources:
+    - daemonsets
+    verbs:
+    - get
+    - list
+  - apiGroups:
+    - extensions
+    resources:
+    - deployments
+    verbs:
+    - get
+    - list
+  - apiGroups:
+    - extensions
+    resources:
+    - replicasets
+    verbs:
+    - get
+    - list
+  - apiGroups:
     - ""
     - image.openshift.io
     resources:
@@ -2540,6 +2561,20 @@ items:
     - update
     - watch
   - apiGroups:
+    - rbac.authorization.k8s.io
+    resources:
+    - rolebindings
+    - roles
+    verbs:
+    - create
+    - delete
+    - deletecollection
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
     - ""
     - authorization.openshift.io
     resources:
@@ -2929,6 +2964,13 @@ items:
     - list
   - apiGroups:
     - ""
+    - security.openshift.io
+    resources:
+    - podsecuritypolicysubjectreviews
+    verbs:
+    - create
+  - apiGroups:
+    - ""
     resources:
     - events
     verbs:
@@ -3081,15 +3123,13 @@ items:
   - apiGroups:
     - template.openshift.io
     resources:
-    - subjectaccessreviews
+    - templateinstances/status
     verbs:
-    - get
-    - list
-    - watch
+    - update
   - apiGroups:
     - template.openshift.io
     resources:
-    - templateinstances/status
+    - templateinstances/finalizers
     verbs:
     - update
 - apiVersion: rbac.authorization.k8s.io/v1beta1
@@ -3265,6 +3305,7 @@ items:
     - ""
     - build.openshift.io
     resources:
+    - builds/custom
     - builds/docker
     - builds/jenkinspipeline
     - builds/optimizeddocker
@@ -3747,6 +3788,12 @@ items:
   - apiGroups:
     - template.openshift.io
     resources:
+    - brokertemplateinstances/finalizers
+    verbs:
+    - update
+  - apiGroups:
+    - template.openshift.io
+    resources:
     - templateinstances
     verbs:
     - assign
@@ -3769,20 +3816,25 @@ items:
     - create
     - delete
     - get
-    - list
   - apiGroups:
     - ""
     resources:
     - configmaps
     - services
     verbs:
-    - list
+    - get
+  - apiGroups:
+    - ""
+    resources:
+    - routes
+    verbs:
+    - get
   - apiGroups:
     - route.openshift.io
     resources:
     - routes
     verbs:
-    - list
+    - get
   - apiGroups:
     - ""
     resources:

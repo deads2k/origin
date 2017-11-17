@@ -696,15 +696,24 @@ func useAggregator(version semver.Version) bool {
 	return version.GTE(version37)
 }
 
-func useTemplateServiceBroker(version semver.Version) bool {
-	return version.GTE(version37)
-}
-
 func (h *Helper) updateConfig(configDir string, opt *StartOptions) error {
 	cfg, configPath, err := h.GetConfigFromLocalDir(configDir)
 	if err != nil {
 		return err
 	}
+
+	// turn on admission webhooks by default.  They are no-ops until someone explicitly tries to configure one
+	if cfg.AdmissionConfig.PluginConfig == nil {
+		cfg.AdmissionConfig.PluginConfig = map[string]configapi.AdmissionPluginConfig{}
+	}
+	cfg.AdmissionConfig.PluginConfig["GenericAdmissionWebhook"] = configapi.AdmissionPluginConfig{
+		Configuration: &configapi.DefaultAdmissionConfig{},
+	}
+
+	if cfg.KubernetesMasterConfig.APIServerArguments == nil {
+		cfg.KubernetesMasterConfig.APIServerArguments = configapi.ExtendedArguments{}
+	}
+	cfg.KubernetesMasterConfig.APIServerArguments["runtime-config"] = append(cfg.KubernetesMasterConfig.APIServerArguments["runtime-config"], "apis/admissionregistration.k8s.io/v1alpha1=true")
 
 	if len(opt.RoutingSuffix) > 0 {
 		cfg.RoutingConfig.Subdomain = opt.RoutingSuffix
@@ -721,9 +730,6 @@ func (h *Helper) updateConfig(configDir string, opt *StartOptions) error {
 	}
 
 	if len(opt.HTTPProxy) > 0 || len(opt.HTTPSProxy) > 0 || len(opt.NoProxy) > 0 {
-		if cfg.AdmissionConfig.PluginConfig == nil {
-			cfg.AdmissionConfig.PluginConfig = map[string]configapi.AdmissionPluginConfig{}
-		}
 
 		var buildDefaults *defaultsapi.BuildDefaultsConfig
 		buildDefaultsConfig, ok := cfg.AdmissionConfig.PluginConfig[defaultsapi.BuildDefaultsPlugin]
@@ -844,12 +850,7 @@ func (h *Helper) updateConfig(configDir string, opt *StartOptions) error {
 		}
 		cfg.AssetConfig.ExtensionScripts = append(cfg.AssetConfig.ExtensionScripts, serviceCatalogExtensionPath)
 
-		extension := `
-window.OPENSHIFT_CONSTANTS.ENABLE_TECH_PREVIEW_FEATURE = {
-  service_catalog_landing_page: true,
-  template_service_broker: true
-};
-`
+		extension := "window.OPENSHIFT_CONSTANTS.TEMPLATE_SERVICE_BROKER_ENABLED = true;\n"
 		extensionPath := filepath.Join(configDir, "master", "servicecatalog-extension.js")
 		err = ioutil.WriteFile(extensionPath, []byte(extension), 0644)
 		if err != nil {

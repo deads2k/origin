@@ -2042,6 +2042,30 @@ items:
     - get
     - list
   - apiGroups:
+    - extensions
+    attributeRestrictions: null
+    resources:
+    - daemonsets
+    verbs:
+    - get
+    - list
+  - apiGroups:
+    - extensions
+    attributeRestrictions: null
+    resources:
+    - deployments
+    verbs:
+    - get
+    - list
+  - apiGroups:
+    - extensions
+    attributeRestrictions: null
+    resources:
+    - replicasets
+    verbs:
+    - get
+    - list
+  - apiGroups:
     - ""
     - image.openshift.io
     attributeRestrictions: null
@@ -2777,6 +2801,21 @@ items:
     - update
     - watch
   - apiGroups:
+    - rbac.authorization.k8s.io
+    attributeRestrictions: null
+    resources:
+    - rolebindings
+    - roles
+    verbs:
+    - create
+    - delete
+    - deletecollection
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
     - ""
     - authorization.openshift.io
     attributeRestrictions: null
@@ -3194,6 +3233,14 @@ items:
     - list
   - apiGroups:
     - ""
+    - security.openshift.io
+    attributeRestrictions: null
+    resources:
+    - podsecuritypolicysubjectreviews
+    verbs:
+    - create
+  - apiGroups:
+    - ""
     attributeRestrictions: null
     resources:
     - events
@@ -3361,16 +3408,14 @@ items:
     - template.openshift.io
     attributeRestrictions: null
     resources:
-    - subjectaccessreviews
+    - templateinstances/status
     verbs:
-    - get
-    - list
-    - watch
+    - update
   - apiGroups:
     - template.openshift.io
     attributeRestrictions: null
     resources:
-    - templateinstances/status
+    - templateinstances/finalizers
     verbs:
     - update
 - apiVersion: v1
@@ -3563,6 +3608,7 @@ items:
     - build.openshift.io
     attributeRestrictions: null
     resources:
+    - builds/custom
     - builds/docker
     - builds/jenkinspipeline
     - builds/optimizeddocker
@@ -4094,6 +4140,13 @@ items:
     - template.openshift.io
     attributeRestrictions: null
     resources:
+    - brokertemplateinstances/finalizers
+    verbs:
+    - update
+  - apiGroups:
+    - template.openshift.io
+    attributeRestrictions: null
+    resources:
     - templateinstances
     verbs:
     - assign
@@ -4118,7 +4171,6 @@ items:
     - create
     - delete
     - get
-    - list
   - apiGroups:
     - ""
     attributeRestrictions: null
@@ -4126,14 +4178,21 @@ items:
     - configmaps
     - services
     verbs:
-    - list
+    - get
+  - apiGroups:
+    - ""
+    attributeRestrictions: null
+    resources:
+    - routes
+    verbs:
+    - get
   - apiGroups:
     - route.openshift.io
     attributeRestrictions: null
     resources:
     - routes
     verbs:
-    - list
+    - get
   - apiGroups:
     - ""
     attributeRestrictions: null
@@ -7087,6 +7146,22 @@ items:
     verbs:
     - get
 - apiVersion: v1
+  kind: Role
+  metadata:
+    annotations:
+      openshift.io/reconcile-protect: "false"
+    creationTimestamp: null
+    name: system:node-config-reader
+    namespace: openshift-node
+  rules:
+  - apiGroups:
+    - ""
+    attributeRestrictions: null
+    resources:
+    - configmaps
+    verbs:
+    - get
+- apiVersion: v1
   groupNames: null
   kind: RoleBinding
   metadata:
@@ -7222,6 +7297,23 @@ items:
   subjects:
   - kind: SystemGroup
     name: system:authenticated
+  userNames: null
+- apiVersion: v1
+  groupNames:
+  - system:nodes
+  kind: RoleBinding
+  metadata:
+    annotations:
+      openshift.io/reconcile-protect: "false"
+    creationTimestamp: null
+    name: system:node-config-reader
+    namespace: openshift-node
+  roleRef:
+    name: system:node-config-reader
+    namespace: openshift-node
+  subjects:
+  - kind: SystemGroup
+    name: system:nodes
   userNames: null
 kind: List
 metadata: {}

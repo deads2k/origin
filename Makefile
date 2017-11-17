@@ -251,7 +251,6 @@ official-release: build-images build-cross
 # Example:
 #   make release
 release: build-images
-	hack/extract-release.sh
 .PHONY: release
 
 # Build the cross compiled release binaries
@@ -277,7 +276,7 @@ install-travis:
 # Example:
 #   make build-rpms
 build-rpms:
-	OS_ONLY_BUILD_PLATFORMS='linux/amd64' hack/build-rpm-release.sh
+	OS_ONLY_BUILD_PLATFORMS='linux/amd64' hack/build-rpms.sh
 .PHONY: build-rpms
 
 # Build RPMs for all architectures
@@ -287,7 +286,7 @@ build-rpms:
 # Example:
 #   make build-rpms-redistributable
 build-rpms-redistributable:
-	hack/build-rpm-release.sh
+	hack/build-rpms.sh
 .PHONY: build-rpms-redistributable
 
 # Build images from the official RPMs

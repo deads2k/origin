@@ -14,6 +14,7 @@ const okCatalogBytes = `{
     "tags": ["tag1", "tag2"],
     "requires": ["route_forwarding"],
     "bindable": true,
+    "binding_retrievable": true,
     "metadata": {
     	"a": "b",
     	"c": "d"
@@ -50,8 +51,9 @@ func okCatalogResponse() *CatalogResponse {
 				Requires: []string{
 					"route_forwarding",
 				},
-				Bindable:      true,
-				PlanUpdatable: truePtr(),
+				Bindable:           true,
+				BindingRetrievable: true,
+				PlanUpdatable:      truePtr(),
 				Plans: []Plan{
 					{
 						ID:          "d3031751-XXXX-XXXX-XXXX-a42377d3320e",
@@ -121,6 +123,7 @@ const alphaParameterSchemaCatalogBytes = `{
     "tags": ["tag1", "tag2"],
     "requires": ["route_forwarding"],
     "bindable": true,
+    "binding_retrievable": true,
     "metadata": {
     	"a": "b",
     	"c": "d"
@@ -166,21 +169,21 @@ const alphaParameterSchemaCatalogBytes = `{
 
 func alphaParameterCatalogResponse() *CatalogResponse {
 	catalog := okCatalogResponse()
-	catalog.Services[0].Plans[0].AlphaParameterSchemas = &AlphaParameterSchemas{
-		ServiceInstances: &AlphaServiceInstanceSchema{
-			Create: &AlphaInputParameters{
+	catalog.Services[0].Plans[0].ParameterSchemas = &ParameterSchemas{
+		ServiceInstances: &ServiceInstanceSchema{
+			Create: &InputParameters{
 				Parameters: map[string]interface{}{
 					"foo": "bar",
 				},
 			},
-			Update: &AlphaInputParameters{
+			Update: &InputParameters{
 				Parameters: map[string]interface{}{
 					"baz": "zap",
 				},
 			},
 		},
-		ServiceBindings: &AlphaServiceBindingSchema{
-			Create: &AlphaInputParameters{
+		ServiceBindings: &ServiceBindingSchema{
+			Create: &InputParameters{
 				Parameters: map[string]interface{}{
 					"zoo": "blu",
 				},
@@ -194,6 +197,7 @@ func alphaParameterCatalogResponse() *CatalogResponse {
 func TestGetCatalog(t *testing.T) {
 	cases := []struct {
 		name               string
+		version            APIVersion
 		enableAlpha        bool
 		httpReaction       httpReaction
 		expectedResponse   *CatalogResponse
@@ -245,11 +249,11 @@ func TestGetCatalog(t *testing.T) {
 				status: http.StatusInternalServerError,
 				body:   conventionalFailureResponseBody,
 			},
-			expectedErr: testHttpStatusCodeError(),
+			expectedErr: testHTTPStatusCodeError(),
 		},
 		{
-			name:        "alpha enabled - schemas",
-			enableAlpha: true,
+			name:    "schemas included if API version >= 2.13",
+			version: Version2_13(),
 			httpReaction: httpReaction{
 				status: http.StatusOK,
 				body:   alphaParameterSchemaCatalogBytes,
@@ -257,7 +261,8 @@ func TestGetCatalog(t *testing.T) {
 			expectedResponse: alphaParameterCatalogResponse(),
 		},
 		{
-			name: "alpha disabled - schemas",
+			name:    "schemas not included if API version < 2.13",
+			version: Version2_12(),
 			httpReaction: httpReaction{
 				status: http.StatusOK,
 				body:   alphaParameterSchemaCatalogBytes,
@@ -271,8 +276,11 @@ func TestGetCatalog(t *testing.T) {
 			URL: "/v2/catalog",
 		}
 
-		version := Version2_11()
-		klient := newTestClient(t, tc.name, version, tc.enableAlpha, httpChecks, tc.httpReaction)
+		if tc.version.label == "" {
+			tc.version = Version2_11()
+		}
+
+		klient := newTestClient(t, tc.name, tc.version, tc.enableAlpha, httpChecks, tc.httpReaction)
 
 		response, err := klient.GetCatalog()
 

@@ -35,8 +35,12 @@ func getTestInstance() *servicecatalog.ServiceInstance {
 			Generation: 1,
 		},
 		Spec: servicecatalog.ServiceInstanceSpec{
-			ExternalServiceClassName: "test-serviceclass",
-			ExternalServicePlanName:  "test-plan",
+			PlanReference: servicecatalog.PlanReference{
+				ClusterServiceClassExternalName: "test-serviceclass",
+				ClusterServicePlanExternalName:  "test-plan",
+			},
+			ClusterServiceClassRef: &servicecatalog.ClusterObjectReference{},
+			ClusterServicePlanRef:  &servicecatalog.ClusterObjectReference{},
 			UserInfo: &servicecatalog.UserInfo{
 				Username: "some-user",
 			},
@@ -60,33 +64,45 @@ func contextWithUserName(userName string) genericapirequest.Context {
 	return genericapirequest.WithUser(ctx, userInfo)
 }
 
-// TODO: Un-comment "spec-change" test case when there is a field
-// in the spec to which the reconciler allows a change.
-
-// TestInstanceUpdate tests that generation is incremented correctly when the
-// spec of a Instance is updated.
+// TestInstanceUpdate tests that updates to the spec of an Instance.
 func TestInstanceUpdate(t *testing.T) {
 	cases := []struct {
 		name                      string
 		older                     *servicecatalog.ServiceInstance
 		newer                     *servicecatalog.ServiceInstance
 		shouldGenerationIncrement bool
+		shouldPlanRefClear        bool
 	}{
 		{
 			name:  "no spec change",
 			older: getTestInstance(),
 			newer: getTestInstance(),
 		},
-		//		{
-		//			name:  "spec change",
-		//			older: getTestInstance(),
-		//			newer: func() *servicecatalog.ServiceInstance {
-		//				i := getTestInstance()
-		//				i.Spec.ServiceClassName = "new-serviceclass"
-		//				return i
-		//			},
-		//			shouldGenerationIncrement: true,
-		//		},
+		{
+			name: "UpdateRequest increment",
+			older: func() *servicecatalog.ServiceInstance {
+				i := getTestInstance()
+				i.Spec.UpdateRequests = 1
+				return i
+			}(),
+			newer: func() *servicecatalog.ServiceInstance {
+				i := getTestInstance()
+				i.Spec.UpdateRequests = 2
+				return i
+			}(),
+			shouldGenerationIncrement: true,
+		},
+		{
+			name:  "plan change",
+			older: getTestInstance(),
+			newer: func() *servicecatalog.ServiceInstance {
+				i := getTestInstance()
+				i.Spec.ClusterServicePlanExternalName = "new-test-plan"
+				return i
+			}(),
+			shouldGenerationIncrement: true,
+			shouldPlanRefClear:        true,
+		},
 	}
 
 	for _, tc := range cases {
@@ -98,6 +114,16 @@ func TestInstanceUpdate(t *testing.T) {
 		}
 		if e, a := expectedGeneration, tc.newer.Generation; e != a {
 			t.Errorf("%v: expected %v, got %v for generation", tc.name, e, a)
+			continue
+		}
+		if tc.shouldPlanRefClear {
+			if tc.newer.Spec.ClusterServicePlanRef != nil {
+				t.Errorf("%v: expected ServicePlanRef to be nil", tc.name)
+			}
+		} else {
+			if tc.newer.Spec.ClusterServicePlanRef == nil {
+				t.Errorf("%v: expected ServicePlanRef to not be nil", tc.name)
+			}
 		}
 	}
 }
@@ -118,17 +144,15 @@ func TestInstanceUserInfo(t *testing.T) {
 		t.Errorf("unexpected user info in created spec: expected %v, got %v", e, a)
 	}
 
-	// TODO: Un-comment the following portion of this test when there is a field
-	// in the spec to which the reconciler allows a change.
+	updaterUserName := "updater"
+	updatedInstance := getTestInstance()
+	updatedInstance.Spec.UpdateRequests = updatedInstance.Spec.UpdateRequests + 1
+	updateContext := contextWithUserName(updaterUserName)
+	instanceRESTStrategies.PrepareForUpdate(updateContext, updatedInstance, createdInstance)
 
-	//  updaterUserName := "updater"
-	//	updatedInstance := getTestInstance()
-	//	updateContext := contextWithUserName(updaterUserName)
-	//	instanceRESTStrategies.PrepareForUpdate(updateContext, updatedInstance, createdInstance)
-
-	//	if e, a := updaterUserName, updatedInstance.Spec.UserInfo.Username; e != a {
-	//		t.Errorf("unexpected user info in updated spec: expected %v, got %v", e, a)
-	//	}
+	if e, a := updaterUserName, updatedInstance.Spec.UserInfo.Username; e != a {
+		t.Errorf("unexpected user info in updated spec: expected %v, got %v", e, a)
+	}
 
 	deleterUserName := "deleter"
 	deletedInstance := getTestInstance()
@@ -137,5 +161,54 @@ func TestInstanceUserInfo(t *testing.T) {
 
 	if e, a := deleterUserName, deletedInstance.Spec.UserInfo.Username; e != a {
 		t.Errorf("unexpected user info in deleted spec: expected %v, got %v", e, a)
+	}
+}
+
+// TestInstanceUpdateForUpdateRequests tests that the UpdateRequests field is
+// ignored during updates when it is the default value.
+func TestInstanceUpdateForUpdateRequests(t *testing.T) {
+	cases := []struct {
+		name          string
+		oldValue      int64
+		newValue      int64
+		expectedValue int64
+	}{
+		{
+			name:          "both default",
+			oldValue:      0,
+			newValue:      0,
+			expectedValue: 0,
+		},
+		{
+			name:          "old default",
+			oldValue:      0,
+			newValue:      1,
+			expectedValue: 1,
+		},
+		{
+			name:          "new default",
+			oldValue:      1,
+			newValue:      0,
+			expectedValue: 1,
+		},
+		{
+			name:          "neither default",
+			oldValue:      1,
+			newValue:      2,
+			expectedValue: 2,
+		},
+	}
+	for _, tc := range cases {
+		oldInstance := getTestInstance()
+		oldInstance.Spec.UpdateRequests = tc.oldValue
+
+		newInstance := getTestInstance()
+		newInstance.Spec.UpdateRequests = tc.newValue
+
+		instanceRESTStrategies.PrepareForUpdate(nil, newInstance, oldInstance)
+
+		if e, a := tc.expectedValue, newInstance.Spec.UpdateRequests; e != a {
+			t.Errorf("%s: got unexpected UpdateRequests: expected %v, got %v", tc.name, e, a)
+		}
 	}
 }

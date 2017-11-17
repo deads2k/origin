@@ -55,7 +55,7 @@ type instanceStatusRESTStrategy struct {
 }
 
 // implements interface RESTUpdateStrategy. This implementation validates updates to
-// instance.Spec.ServicePlanRef and instance.Spec.ServiceClassRef only and disallows
+// instance.Spec.ClusterServicePlanRef and instance.Spec.ClusterServiceClassRef only and disallows
 // any modifications to the remaining instance.Spec or Status fields.
 type instanceReferenceRESTStrategy struct {
 	instanceRESTStrategy
@@ -114,12 +114,14 @@ func (instanceRESTStrategy) PrepareForCreate(ctx genericapirequest.Context, obj 
 	// Creating a brand new object, thus it must have no
 	// status. We can't fail here if they passed a status in, so
 	// we just wipe it clean.
-	instance.Status = sc.ServiceInstanceStatus{}
+	instance.Status = sc.ServiceInstanceStatus{
+		// Fill in the first entry set to "creating"?
+		Conditions:        []sc.ServiceInstanceCondition{},
+		DeprovisionStatus: sc.ServiceInstanceDeprovisionStatusNotRequired,
+	}
 
-	instance.Spec.ServiceClassRef = nil
-	instance.Spec.ServicePlanRef = nil
-	// Fill in the first entry set to "creating"?
-	instance.Status.Conditions = []sc.ServiceInstanceCondition{}
+	instance.Spec.ClusterServiceClassRef = nil
+	instance.Spec.ClusterServicePlanRef = nil
 	instance.Finalizers = []string{sc.FinalizerServiceCatalog}
 	instance.Generation = 1
 }
@@ -150,21 +152,21 @@ func (instanceRESTStrategy) PrepareForUpdate(ctx genericapirequest.Context, new,
 	newServiceInstance.Status = oldServiceInstance.Status
 
 	// Do not allow updates to Service[Class|Plan]Ref fields
-	newServiceInstance.Spec.ServiceClassRef = oldServiceInstance.Spec.ServiceClassRef
-	newServiceInstance.Spec.ServicePlanRef = oldServiceInstance.Spec.ServicePlanRef
+	newServiceInstance.Spec.ClusterServiceClassRef = oldServiceInstance.Spec.ClusterServiceClassRef
+	newServiceInstance.Spec.ClusterServicePlanRef = oldServiceInstance.Spec.ClusterServicePlanRef
 
-	// TODO: We currently don't handle any changes to the spec in the
-	// reconciler. Once we do that, this check needs to be removed and
-	// proper validation of allowed changes needs to be implemented in
-	// ValidateUpdate. Also, the check for whether the generation needs
-	// to be updated needs to be un-commented.
-	newServiceInstance.Spec = oldServiceInstance.Spec
+	// Clear out the ClusterServicePlanRef so that it is resolved during reconciliation
+	if newServiceInstance.Spec.ClusterServicePlanExternalName != oldServiceInstance.Spec.ClusterServicePlanExternalName {
+		newServiceInstance.Spec.ClusterServicePlanRef = nil
+	}
+
+	// Ignore the UpdateRequests field when it is the default value
+	if newServiceInstance.Spec.UpdateRequests == 0 {
+		newServiceInstance.Spec.UpdateRequests = oldServiceInstance.Spec.UpdateRequests
+	}
 
 	// Spec updates bump the generation so that we can distinguish between
 	// spec changes and other changes to the object.
-	//
-	// Note that since we do not currently handle any changes to the spec,
-	// the generation will never be incremented
 	if !apiequality.Semantic.DeepEqual(oldServiceInstance.Spec, newServiceInstance.Spec) {
 		if utilfeature.DefaultFeatureGate.Enabled(scfeatures.OriginatingIdentity) {
 			setServiceInstanceUserInfo(newServiceInstance, ctx)
@@ -241,11 +243,11 @@ func (instanceReferenceRESTStrategy) PrepareForUpdate(ctx genericapirequest.Cont
 	// Reference changes are not allowed to update spec, so stash the new
 	// ones away and overwrite with all the old ones and then update them
 	// again.
-	newServiceClassRef := newServiceInstance.Spec.ServiceClassRef
-	newServicePlanRef := newServiceInstance.Spec.ServicePlanRef
+	newClusterServiceClassRef := newServiceInstance.Spec.ClusterServiceClassRef
+	newClusterServicePlanRef := newServiceInstance.Spec.ClusterServicePlanRef
 	newServiceInstance.Spec = oldServiceInstance.Spec
-	newServiceInstance.Spec.ServiceClassRef = newServiceClassRef
-	newServiceInstance.Spec.ServicePlanRef = newServicePlanRef
+	newServiceInstance.Spec.ClusterServiceClassRef = newClusterServiceClassRef
+	newServiceInstance.Spec.ClusterServicePlanRef = newClusterServicePlanRef
 	newServiceInstance.Status = oldServiceInstance.Status
 }
 

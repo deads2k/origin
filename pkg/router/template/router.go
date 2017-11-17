@@ -22,7 +22,7 @@ import (
 	cmdutil "github.com/openshift/origin/pkg/cmd/util"
 	routeapi "github.com/openshift/origin/pkg/route/apis/route"
 	"github.com/openshift/origin/pkg/router/controller"
-	"github.com/openshift/origin/pkg/util/ratelimiter"
+	"github.com/openshift/origin/pkg/router/template/limiter"
 )
 
 const (
@@ -88,9 +88,7 @@ type templateRouter struct {
 	allowWildcardRoutes bool
 	// rateLimitedCommitFunction is a rate limited commit (persist state + refresh the backend)
 	// function that coalesces and controls how often the router is reloaded.
-	rateLimitedCommitFunction *ratelimiter.RateLimitedFunction
-	// rateLimitedCommitStopChannel is the stop/terminate channel.
-	rateLimitedCommitStopChannel chan struct{}
+	rateLimitedCommitFunction *limiter.CoalescingSerializingRateLimiter
 	// lock is a mutex used to prevent concurrent router reloads.
 	lock sync.Mutex
 	// If true, haproxy should only bind ports when it has route and endpoint state
@@ -206,12 +204,10 @@ func newTemplateRouter(cfg templateRouterCfg) (*templateRouter, error) {
 		metricReload:      metricsReload,
 		metricWriteConfig: metricWriteConfig,
 
-		rateLimitedCommitFunction:    nil,
-		rateLimitedCommitStopChannel: make(chan struct{}),
+		rateLimitedCommitFunction: nil,
 	}
 
-	numSeconds := int(cfg.reloadInterval.Seconds())
-	router.EnableRateLimiter(numSeconds, router.commitAndReload)
+	router.EnableRateLimiter(cfg.reloadInterval, router.commitAndReload)
 
 	if err := router.writeDefaultCert(); err != nil {
 		return nil, err
@@ -227,14 +223,9 @@ func newTemplateRouter(cfg templateRouterCfg) (*templateRouter, error) {
 	return router, nil
 }
 
-func (r *templateRouter) EnableRateLimiter(interval int, handlerFunc ratelimiter.HandlerFunc) {
-	keyFunc := func(_ interface{}) (string, error) {
-		return "templaterouter", nil
-	}
-
-	r.rateLimitedCommitFunction = ratelimiter.NewRateLimitedFunction(keyFunc, interval, handlerFunc)
-	r.rateLimitedCommitFunction.RunUntil(r.rateLimitedCommitStopChannel)
-	glog.V(2).Infof("Template router will coalesce reloads within %v seconds of each other", interval)
+func (r *templateRouter) EnableRateLimiter(interval time.Duration, handlerFunc limiter.HandlerFunc) {
+	r.rateLimitedCommitFunction = limiter.NewCoalescingSerializingRateLimiter(interval, handlerFunc)
+	glog.V(2).Infof("Template router will coalesce reloads within %s of each other", interval.String())
 }
 
 // secretToPem composes a PEM file at the output directory from an input private key and crt file.
@@ -328,7 +319,7 @@ func (r *templateRouter) Commit() {
 	r.lock.Unlock()
 
 	if needsCommit {
-		r.rateLimitedCommitFunction.Invoke(r.rateLimitedCommitFunction)
+		r.rateLimitedCommitFunction.RegisterChange()
 	}
 }
 
@@ -384,12 +375,21 @@ func (r *templateRouter) writeState() error {
 }
 
 // writeConfig writes the config to disk
+// Must be called while holding r.lock
 func (r *templateRouter) writeConfig() error {
 	//write out any certificate files that don't exist
 	for k, cfg := range r.state {
 		if err := r.writeCertificates(&cfg); err != nil {
 			return fmt.Errorf("error writing certificates for %s: %v", k, err)
 		}
+
+		// calculate the server weight for the endpoints in each service
+		// called here to make sure we have the actual number of endpoints.
+		cfg.ServiceUnitNames = r.calculateServiceWeights(cfg.ServiceUnits)
+
+		// Calculate the number of active endpoints for the route.
+		cfg.ActiveEndpoints = r.getActiveEndpoints(cfg.ServiceUnits)
+
 		cfg.Status = ServiceAliasConfigStatusSaved
 		r.state[k] = cfg
 	}
@@ -574,8 +574,9 @@ func (r *templateRouter) createServiceAliasConfig(route *routeapi.Route, backend
 	// The router config trumps what the route asks for/wants.
 	wildcard := r.allowWildcardRoutes && wantsWildcardSupport
 
-	// Get the service units and count the active ones (with a non-zero weight)
-	serviceUnits := getServiceUnits(r.numberOfEndpoints, route)
+	// Get the service weights from each service in the route. Count the active
+	// ones (with a non-zero weight)
+	serviceUnits := getServiceUnits(route)
 	activeServiceUnits := 0
 	for _, weight := range serviceUnits {
 		if weight > 0 {
@@ -590,7 +591,7 @@ func (r *templateRouter) createServiceAliasConfig(route *routeapi.Route, backend
 		Path:               route.Spec.Path,
 		IsWildcard:         wildcard,
 		Annotations:        route.Annotations,
-		ServiceUnitNames:   serviceUnits,
+		ServiceUnits:       serviceUnits,
 		ActiveServiceUnits: activeServiceUnits,
 	}
 
@@ -682,7 +683,7 @@ func (r *templateRouter) AddRoute(route *routeapi.Route) {
 	}
 
 	// Add service units referred to by the config
-	for key := range newConfig.ServiceUnitNames {
+	for key := range newConfig.ServiceUnits {
 		if _, ok := r.findMatchingServiceUnit(key); !ok {
 			glog.V(4).Infof("Creating new frontend for key: %v", key)
 			r.createServiceUnitInternal(key)
@@ -716,10 +717,8 @@ func (r *templateRouter) removeRouteInternal(route *routeapi.Route) {
 }
 
 // numberOfEndpoints returns the number of endpoints
+// Must be called while holding r.lock
 func (r *templateRouter) numberOfEndpoints(id string) int32 {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
 	var eps = 0
 	svc, ok := r.findMatchingServiceUnit(id)
 	if ok && len(svc.EndpointTable) > eps {
@@ -868,75 +867,119 @@ func generateDestCertKey(config *ServiceAliasConfig) string {
 	return config.Host + destCertPostfix
 }
 
-type endpointsCounter func(key string) int32
-
 // getServiceUnits returns a map of service keys to their weights.
 // The requests are loadbalanced among the services referenced by the route.
 // The weight (0-256, default 1) sets the relative proportions each
-// service gets (weight/sum_of_weights fraction of the requests).
+// service gets (weight/sum_of_weights) fraction of the requests.
+// Default when service weight is omitted is 1.
+// if weight < 0 or > 256 set to 0.
 // When the weight is 0 no traffic goes to the service. If they are
 // all 0 the request is returned with 503 response.
-// For each service, the requests are distributed among the endpoints.
-// Each endpoint gets weight/numberOfEndpoints portion of the requests.
-// The above assumes roundRobin scheduling.
-func getServiceUnits(counter endpointsCounter, route *routeapi.Route) map[string]int32 {
+func getServiceUnits(route *routeapi.Route) map[string]int32 {
 	serviceUnits := make(map[string]int32)
-	key := endpointsKeyFromParts(route.Namespace, route.Spec.To.Name)
 
-	// find the maximum weight
-	var maxWeight int32 = 1
-	if route.Spec.To.Weight != nil && *route.Spec.To.Weight > maxWeight {
-		maxWeight = *route.Spec.To.Weight
-	}
+	// get the weight and number of endpoints for each service
+	key := endpointsKeyFromParts(route.Namespace, route.Spec.To.Name)
+	serviceUnits[key] = getServiceUnitWeight(route.Spec.To.Weight)
+
 	for _, svc := range route.Spec.AlternateBackends {
-		if svc.Weight != nil && *svc.Weight > maxWeight {
-			maxWeight = *svc.Weight
+		key = endpointsKeyFromParts(route.Namespace, svc.Name)
+		serviceUnits[key] = getServiceUnitWeight(svc.Weight)
+	}
+
+	return serviceUnits
+}
+
+// getServiceUnitWeight takes a reference to a weight and returns its value or the default.
+// It also checks that it is in the correct range.
+func getServiceUnitWeight(weightRef *int32) int32 {
+	// Default to 1 if there is no weight
+	var weight int32 = 1
+	if weightRef != nil {
+		weight = *weightRef
+	}
+
+	// Do a bounds check
+	if weight < 0 {
+		weight = 0
+	} else if weight > 256 {
+		weight = 256
+	}
+
+	return weight
+}
+
+// getActiveEndpoints calculates the number of endpoints that are not associated
+// with service units with a zero weight and returns the count.
+func (r *templateRouter) getActiveEndpoints(serviceUnits map[string]int32) int {
+	var activeEndpoints int32 = 0
+
+	for key, weight := range serviceUnits {
+		if weight > 0 {
+			activeEndpoints += r.numberOfEndpoints(key)
 		}
 	}
+
+	return int(activeEndpoints)
+}
+
+// calculateServiceWeights returns a map of service keys to their weights.
+// Each service gets (weight/sum_of_weights) fraction of the requests.
+// For each service, the requests are distributed among the endpoints.
+// Each endpoint gets weight/numberOfEndpoints portion of the requests.
+// The largest weight per endpoint is scaled to 256 to permit better
+// percision results.  The remainder are scaled using the same scale factor.
+// Inaccuracies occur when converting float32 to int32 and when the scaled
+// weight per endpoint is less than 1.0, the minimum.
+// The above assumes roundRobin scheduling.
+func (r *templateRouter) calculateServiceWeights(serviceUnits map[string]int32) map[string]int32 {
+	serviceUnitNames := make(map[string]int32)
+	// portion of service weight for each endpoint
+	epWeight := make(map[string]float32)
+	// maximum endpoint weight
+	var maxEpWeight float32 = 0.0
+
+	// distribute service weight over the service's endpoints
+	// to get weight per endpoint
+	for key, units := range serviceUnits {
+		numEp := r.numberOfEndpoints(key)
+		if numEp > 0 {
+			epWeight[key] = float32(units) / float32(numEp)
+		}
+		if epWeight[key] > maxEpWeight {
+			maxEpWeight = epWeight[key]
+		}
+	}
+
 	// Scale the weights to near the maximum (256).
 	// This improves precision when scaling for the endpoints
-	var scaleWeight int32 = 256 / maxWeight
+	var scaleWeight float32 = 0.0
+	if maxEpWeight > 0.0 {
+		scaleWeight = 256.0 / maxEpWeight
+	}
 
 	// The weight assigned to the service is distributed among the endpoints
 	// for example the if we have two services "A" with weight 20 and 2 endpoints
 	// and "B" with  weight 10 and 4 endpoints the ultimate weights on
 	// endpoints would work out as:
-	// maxWeight = 20, scaleWeight 12 (division truncates 12.8 to 12)
-	// Scaled "A" is 240, "B" is 120
-	// "A" has 2 endpoints: each gets weight 120 (of the available 240)
-	// "B" has 4 endpoints: each gets weight 30  (of the available 120)
+	// service "A" weight per endpoint 10.0
+	// service "B" weight per endpoint 2.5
+	// maximum endpoint weight is 10.0 so scale is 25.6
+	// service "A" scaled endpoint weight 256.0 truncated to 256
+	// service "B" scaled endpoint weight 64.0 truncated to 64
+	// So, all service "A" endpoints get 256 and all service "B" endpoints get 64
 
-	// serviceUnits[key] is the weigth for each endpoint in the service
-	// the sum of the weights of the endpoints is the scaled service weight.
+	for key, weight := range epWeight {
+		serviceUnitNames[key] = int32(weight * scaleWeight)
+		if weight > 0.0 && serviceUnitNames[key] < 1 {
+			serviceUnitNames[key] = 1
+			numEp := r.numberOfEndpoints(key)
+			glog.V(4).Infof("%s: WARNING: Too many endpoints to achieve desired weight for route. Service can have %d but has %d endpoints", key, int32(weight*float32(numEp)), numEp)
+		}
+		glog.V(6).Infof("%s: weight %d  %f  %d", key, serviceUnits[key], weight, serviceUnitNames[key])
+	}
 
-	var numEp int32 = counter(key)
-	if numEp < 1 {
-		numEp = 1
-	}
-	if route.Spec.To.Weight == nil {
-		serviceUnits[key] = scaleWeight / numEp
-	} else {
-		serviceUnits[key] = (*route.Spec.To.Weight * scaleWeight) / numEp
-		if *route.Spec.To.Weight > 0 && serviceUnits[key] < 1 {
-			serviceUnits[key] = 1
-		}
-	}
-	for _, svc := range route.Spec.AlternateBackends {
-		key = fmt.Sprintf("%s/%s", route.Namespace, svc.Name)
-		numEp = counter(key)
-		if numEp < 1 {
-			numEp = 1
-		}
-		if svc.Weight == nil {
-			serviceUnits[key] = scaleWeight / numEp
-		} else {
-			serviceUnits[key] = (*svc.Weight * scaleWeight) / numEp
-			if *svc.Weight > 0 && serviceUnits[key] < 1 {
-				serviceUnits[key] = 1
-			}
-		}
-	}
-	return serviceUnits
+	return serviceUnitNames
 }
 
 // configsAreEqual determines whether the given service alias configs can be considered equal.
@@ -958,5 +1001,5 @@ func configsAreEqual(config1, config2 *ServiceAliasConfig) bool {
 		config1.IsWildcard == config2.IsWildcard &&
 		config1.VerifyServiceHostname == config2.VerifyServiceHostname &&
 		reflect.DeepEqual(config1.Annotations, config2.Annotations) &&
-		reflect.DeepEqual(config1.ServiceUnitNames, config2.ServiceUnitNames)
+		reflect.DeepEqual(config1.ServiceUnits, config2.ServiceUnits)
 }

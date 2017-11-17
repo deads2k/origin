@@ -124,7 +124,7 @@ func NewCmdEnv(fullName string, f *clientcmd.Factory, in io.Reader, out, errout 
 		Run: func(cmd *cobra.Command, args []string) {
 			kcmdutil.CheckErr(options.Complete(f, cmd, args))
 			err := options.RunEnv(f)
-			if err == cmdutil.ErrExit {
+			if err == kcmdutil.ErrExit {
 				os.Exit(1)
 			}
 			kcmdutil.CheckErr(err)
@@ -433,7 +433,7 @@ func (o *EnvOptions) RunEnv(f *clientcmd.Factory) error {
 		return fmt.Errorf("%s/%s is not a pod or does not have a pod template", infos[0].Mapping.Resource, infos[0].Name)
 	}
 	if len(errored) == len(infos) {
-		return cmdutil.ErrExit
+		return kcmdutil.ErrExit
 	}
 
 	if o.List {
@@ -478,7 +478,7 @@ updates:
 
 		// make sure arguments to set or replace environment variables are set
 		// before returning a successful message
-		if len(env) == 0 && len(o.EnvArgs) == 0 {
+		if len(env) == 0 && len(o.EnvArgs) == 0 && len(remove) == 0 {
 			return fmt.Errorf("at least one environment variable must be provided")
 		}
 
@@ -486,7 +486,7 @@ updates:
 		kcmdutil.PrintSuccess(mapper, o.ShortOutput, o.Out, info.Mapping.Resource, info.Name, false, "updated")
 	}
 	if failed {
-		return cmdutil.ErrExit
+		return kcmdutil.ErrExit
 	}
 	return nil
 }

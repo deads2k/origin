@@ -15,17 +15,35 @@ func defaultUnbindRequest() *UnbindRequest {
 	}
 }
 
+func defaultAsyncUnbindRequest() *UnbindRequest {
+	r := defaultUnbindRequest()
+	r.AcceptsIncomplete = true
+	return r
+}
+
 const successUnbindResponseBody = `{}`
+
+const successAsyncUnbindResponseBody = `{
+  "operation": "test-operation-key"
+}`
 
 func successUnbindResponse() *UnbindResponse {
 	return &UnbindResponse{}
 }
 
+func successUnbindResponseAsync() *UnbindResponse {
+	return &UnbindResponse{
+		Async:        true,
+		OperationKey: &testOperation,
+	}
+}
+
 func TestUnbind(t *testing.T) {
 	cases := []struct {
 		name                string
+		version             APIVersion
 		enableAlpha         bool
-		originatingIdentity *AlphaOriginatingIdentity
+		originatingIdentity *OriginatingIdentity
 		request             *UnbindRequest
 		httpChecks          httpChecks
 		httpReaction        httpReaction
@@ -51,11 +69,35 @@ func TestUnbind(t *testing.T) {
 			expectedResponse: successUnbindResponse(),
 		},
 		{
+			name:        "success - asynchronous",
+			version:     LatestAPIVersion(),
+			enableAlpha: true,
+			request:     defaultAsyncUnbindRequest(),
+			httpChecks: httpChecks{
+				params: map[string]string{
+					asyncQueryParamKey: "true",
+				},
+			},
+			httpReaction: httpReaction{
+				status: http.StatusAccepted,
+				body:   successAsyncUnbindResponseBody,
+			},
+			expectedResponse: successUnbindResponseAsync(),
+		},
+		{
 			name: "http error",
 			httpReaction: httpReaction{
 				err: fmt.Errorf("http error"),
 			},
 			expectedErrMessage: "http error",
+		},
+		{
+			name: "202 with no async support",
+			httpReaction: httpReaction{
+				status: http.StatusAccepted,
+				body:   successAsyncUnbindResponseBody,
+			},
+			expectedErrMessage: "Status: 202; ErrorMessage: <nil>; Description: <nil>; ResponseError: <nil>",
 		},
 		{
 			name: "200 with malformed response",
@@ -79,11 +121,11 @@ func TestUnbind(t *testing.T) {
 				status: http.StatusInternalServerError,
 				body:   conventionalFailureResponseBody,
 			},
-			expectedErr: testHttpStatusCodeError(),
+			expectedErr: testHTTPStatusCodeError(),
 		},
 		{
 			name:                "originating identity included",
-			enableAlpha:         true,
+			version:             Version2_13(),
 			originatingIdentity: testOriginatingIdentity,
 			httpChecks:          httpChecks{headers: map[string]string{OriginatingIdentityHeader: testOriginatingIdentityHeaderValue}},
 			httpReaction: httpReaction{
@@ -94,7 +136,7 @@ func TestUnbind(t *testing.T) {
 		},
 		{
 			name:                "originating identity excluded",
-			enableAlpha:         true,
+			version:             Version2_13(),
 			originatingIdentity: nil,
 			httpChecks:          httpChecks{headers: map[string]string{OriginatingIdentityHeader: ""}},
 			httpReaction: httpReaction{
@@ -104,8 +146,8 @@ func TestUnbind(t *testing.T) {
 			expectedResponse: successUnbindResponse(),
 		},
 		{
-			name:                "originating identity not sent unless alpha enabled",
-			enableAlpha:         false,
+			name:                "originating identity not sent unless API version >= 2.13",
+			version:             Version2_12(),
 			originatingIdentity: testOriginatingIdentity,
 			httpChecks:          httpChecks{headers: map[string]string{OriginatingIdentityHeader: ""}},
 			httpReaction: httpReaction{
@@ -113,6 +155,20 @@ func TestUnbind(t *testing.T) {
 				body:   successUnbindResponseBody,
 			},
 			expectedResponse: successUnbindResponse(),
+		},
+		{
+			name:               "async with alpha features disabled",
+			version:            LatestAPIVersion(),
+			enableAlpha:        false,
+			request:            defaultAsyncUnbindRequest(),
+			expectedErrMessage: "Asynchronous binding operations are not allowed: alpha API methods not allowed: alpha features must be enabled",
+		},
+		{
+			name:               "async with unsupported API version",
+			version:            Version2_12(),
+			enableAlpha:        true,
+			request:            defaultAsyncUnbindRequest(),
+			expectedErrMessage: "Asynchronous binding operations are not allowed: alpha API methods not allowed: must have latest API Version. Current: 2.12, Expected: 2.13",
 		},
 	}
 
@@ -133,8 +189,11 @@ func TestUnbind(t *testing.T) {
 			tc.httpChecks.params[planIDKey] = testPlanID
 		}
 
-		version := Version2_11()
-		klient := newTestClient(t, tc.name, version, tc.enableAlpha, tc.httpChecks, tc.httpReaction)
+		if tc.version.label == "" {
+			tc.version = Version2_11()
+		}
+
+		klient := newTestClient(t, tc.name, tc.version, tc.enableAlpha, tc.httpChecks, tc.httpReaction)
 
 		response, err := klient.Unbind(tc.request)
 

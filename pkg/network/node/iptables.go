@@ -99,19 +99,24 @@ func (n *NodeIPTables) syncIPTableRules() error {
 	}()
 	glog.V(3).Infof("Syncing openshift iptables rules")
 
-	for _, chain := range n.getNodeIPTablesChains() {
+	chains := n.getNodeIPTablesChains()
+	for i := len(chains) - 1; i >= 0; i-- {
+		chain := chains[i]
 		// Create chain if it does not already exist
 		chainExisted, err := n.ipt.EnsureChain(iptables.Table(chain.table), iptables.Chain(chain.name))
 		if err != nil {
 			return fmt.Errorf("failed to ensure chain %s exists: %v", chain.name, err)
 		}
-		// Create the rule pointing to it from its parent chain. Note that since we
-		// use iptables.Prepend each time, chains with the same table and srcChain
-		// (ie, OPENSHIFT-FIREWALL-FORWARD and OPENSHIFT-ADMIN-OUTPUT-RULES) will
-		// run in *reverse* order of how they are listed in getNodeIPTablesChains().
-		_, err = n.ipt.EnsureRule(iptables.Prepend, iptables.Table(chain.table), iptables.Chain(chain.srcChain), append(chain.srcRule, "-j", chain.name)...)
-		if err != nil && chain.name != "OPENSHIFT-MASQUERADE-2" {
-			return fmt.Errorf("failed to ensure rule from %s to %s exists: %v", chain.srcChain, chain.name, err)
+		if chain.srcChain != "" {
+			// Create the rule pointing to it from its parent chain. Note that since we
+			// use iptables.Prepend each time, but process the chains in reverse order,
+			// chains with the same table and srcChain (ie, OPENSHIFT-FIREWALL-FORWARD
+			// and OPENSHIFT-ADMIN-OUTPUT-RULES) will run in the same order as they
+			// appear in getNodeIPTablesChains().
+			_, err = n.ipt.EnsureRule(iptables.Prepend, iptables.Table(chain.table), iptables.Chain(chain.srcChain), append(chain.srcRule, "-j", chain.name)...)
+			if err != nil {
+				return fmt.Errorf("failed to ensure rule from %s to %s exists: %v", chain.srcChain, chain.name, err)
+			}
 		}
 
 		// Add/sync the rules
@@ -159,7 +164,8 @@ func (n *NodeIPTables) getNodeIPTablesChains() []Chain {
 			srcChain: "FORWARD",
 			srcRule:  []string{"-i", Tun0, "!", "-o", Tun0, "-m", "comment", "--comment", "administrator overrides"},
 			rules:    nil,
-		})
+		},
+	)
 
 	var masqRules [][]string
 	var masq2Rules [][]string
@@ -177,16 +183,6 @@ func (n *NodeIPTables) getNodeIPTablesChains() []Chain {
 		filterRules = append(filterRules, []string{"-s", cidr, "-m", "comment", "--comment", "forward traffic to SDN", "-j", "ACCEPT"})
 	}
 
-	if !n.masqueradeServices {
-		masq2Rules = append(masq2Rules, []string{"-j", "MASQUERADE"})
-		chainArray = append(chainArray,
-			Chain{
-				table: "nat",
-				name:  "OPENSHIFT-MASQUERADE-2",
-				rules: masq2Rules,
-			})
-	}
-
 	chainArray = append(chainArray,
 		Chain{
 			table:    "nat",
@@ -201,7 +197,18 @@ func (n *NodeIPTables) getNodeIPTablesChains() []Chain {
 			srcChain: "FORWARD",
 			srcRule:  []string{"-m", "comment", "--comment", "firewall overrides"},
 			rules:    filterRules,
-		})
+		},
+	)
+	if !n.masqueradeServices {
+		masq2Rules = append(masq2Rules, []string{"-j", "MASQUERADE"})
+		chainArray = append(chainArray,
+			Chain{
+				table: "nat",
+				name:  "OPENSHIFT-MASQUERADE-2",
+				rules: masq2Rules,
+			},
+		)
+	}
 	return chainArray
 }
 

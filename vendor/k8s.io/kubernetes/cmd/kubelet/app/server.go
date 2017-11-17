@@ -24,12 +24,14 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
-	_ "net/http/pprof"
 	"net/url"
 	"os"
 	"path"
 	"strconv"
 	"time"
+
+	// included for side effect of getting pprof endpoints
+	_ "net/http/pprof"
 
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
@@ -39,7 +41,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	utilnet "k8s.io/apimachinery/pkg/util/net"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -62,6 +63,7 @@ import (
 	"k8s.io/kubernetes/pkg/capabilities"
 	"k8s.io/kubernetes/pkg/client/chaosclient"
 	"k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
+	v1coregenerated "k8s.io/kubernetes/pkg/client/clientset_generated/clientset/typed/core/v1"
 	"k8s.io/kubernetes/pkg/cloudprovider"
 	"k8s.io/kubernetes/pkg/credentialprovider"
 	"k8s.io/kubernetes/pkg/features"
@@ -158,6 +160,7 @@ func UnsecuredKubeletDeps(s *options.KubeletServer) (*kubelet.KubeletDeps, error
 		ContainerManager:   nil,
 		DockerClient:       dockerClient,
 		KubeClient:         nil,
+		HeartbeatClient:    nil,
 		ExternalKubeClient: nil,
 		Mounter:            mounter,
 		NetworkPlugins:     ProbeNetworkPlugins(s.NetworkPluginDir, s.CNIConfDir, s.CNIBinDir),
@@ -453,6 +456,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.KubeletDeps) (err error) {
 	if kubeDeps.KubeClient == nil || kubeDeps.ExternalKubeClient == nil || kubeDeps.EventClient == nil {
 		var kubeClient clientset.Interface
 		var eventClient v1core.EventsGetter
+		var heartbeatClient v1coregenerated.CoreV1Interface
 		var externalKubeClient clientgoclientset.Interface
 
 		clientConfig, err := CreateAPIServerClientConfig(s)
@@ -464,7 +468,9 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.KubeletDeps) (err error) {
 				if err != nil {
 					return err
 				}
-				if err := updateTransport(clientConfig, clientCertificateManager); err != nil {
+				// we set exitIfExpired to true because we use this client configuration to request new certs - if we are unable
+				// to request new certs we will need to re-bootstrap
+				if err := certificate.UpdateTransport(wait.NeverStop, clientConfig, clientCertificateManager, true); err != nil {
 					return err
 				}
 			}
@@ -481,6 +487,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.KubeletDeps) (err error) {
 			if err != nil {
 				glog.Warningf("New kubeClient from clientConfig error: %v", err)
 			}
+
 			// make a separate client for events
 			eventClientConfig := *clientConfig
 			eventClientConfig.QPS = float32(s.EventRecordQPS)
@@ -488,6 +495,15 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.KubeletDeps) (err error) {
 			eventClient, err = clientgoclientset.NewForConfig(&eventClientConfig)
 			if err != nil {
 				glog.Warningf("Failed to create API Server client: %v", err)
+			}
+
+			// make a separate client for heartbeat with throttling disabled and a timeout attached
+			heartbeatClientConfig := *clientConfig
+			heartbeatClientConfig.Timeout = s.KubeletConfiguration.NodeStatusUpdateFrequency.Duration
+			heartbeatClientConfig.QPS = float32(-1)
+			heartbeatClient, err = v1coregenerated.NewForConfig(&heartbeatClientConfig)
+			if err != nil {
+				glog.Warningf("Failed to create API Server client for heartbeat: %v", err)
 			}
 		} else {
 			switch {
@@ -503,6 +519,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.KubeletDeps) (err error) {
 		kubeDeps.KubeClient = kubeClient
 		kubeDeps.ExternalKubeClient = externalKubeClient
 		kubeDeps.EventClient = eventClient
+		kubeDeps.HeartbeatClient = heartbeatClient
 	}
 
 	if kubeDeps.Auth == nil {
@@ -612,44 +629,6 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.KubeletDeps) (err error) {
 	}
 
 	<-done
-	return nil
-}
-
-func updateTransport(clientConfig *restclient.Config, clientCertificateManager certificate.Manager) error {
-	if clientConfig.Transport != nil {
-		return fmt.Errorf("there is already a transport configured")
-	}
-	tlsConfig, err := restclient.TLSConfigFor(clientConfig)
-	if err != nil {
-		return fmt.Errorf("unable to configure TLS for the rest client: %v", err)
-	}
-	if tlsConfig == nil {
-		tlsConfig = &tls.Config{}
-	}
-	tlsConfig.Certificates = nil
-	tlsConfig.GetClientCertificate = func(requestInfo *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-		cert := clientCertificateManager.Current()
-		if cert == nil {
-			return &tls.Certificate{Certificate: nil}, nil
-		}
-		return cert, nil
-	}
-	clientConfig.Transport = utilnet.SetTransportDefaults(&http.Transport{
-		Proxy:               http.ProxyFromEnvironment,
-		TLSHandshakeTimeout: 10 * time.Second,
-		TLSClientConfig:     tlsConfig,
-		MaxIdleConnsPerHost: 25,
-		Dial: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).Dial,
-	})
-	clientConfig.CertData = nil
-	clientConfig.KeyData = nil
-	clientConfig.CertFile = ""
-	clientConfig.KeyFile = ""
-	clientConfig.CAData = nil
-	clientConfig.CAFile = ""
 	return nil
 }
 

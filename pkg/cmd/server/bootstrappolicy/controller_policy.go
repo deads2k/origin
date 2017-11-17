@@ -109,6 +109,7 @@ func init() {
 			rbac.NewRule("get", "list", "create", "delete").Groups(kapiGroup).Resources("pods").RuleOrDie(),
 			rbac.NewRule("get").Groups(kapiGroup).Resources("namespaces").RuleOrDie(),
 			rbac.NewRule("get", "list").Groups(kapiGroup).Resources("serviceaccounts").RuleOrDie(),
+			rbac.NewRule("create").Groups(securityGroup, legacySecurityGroup).Resources("podsecuritypolicysubjectreviews").RuleOrDie(),
 			eventsRule(),
 		},
 	})
@@ -155,8 +156,8 @@ func init() {
 		ObjectMeta: metav1.ObjectMeta{Name: saRolePrefix + InfraTemplateInstanceControllerServiceAccountName},
 		Rules: []rbac.PolicyRule{
 			rbac.NewRule("create").Groups(kAuthzGroup).Resources("subjectaccessreviews").RuleOrDie(),
-			rbac.NewRule("get", "list", "watch").Groups(templateGroup).Resources("subjectaccessreviews").RuleOrDie(),
 			rbac.NewRule("update").Groups(templateGroup).Resources("templateinstances/status").RuleOrDie(),
+			rbac.NewRule("update").Groups(templateGroup).Resources("templateinstances/finalizers").RuleOrDie(),
 		},
 	})
 
@@ -211,6 +212,7 @@ func init() {
 			rbac.NewRule("create").Groups(buildGroup, legacyBuildGroup).Resources(
 				authorizationapi.SourceBuildResource,
 				authorizationapi.DockerBuildResource,
+				authorizationapi.CustomBuildResource,
 				authorizationapi.OptimizedDockerBuildResource,
 				authorizationapi.JenkinsPipelineBuildResource,
 			).RuleOrDie(),
@@ -335,11 +337,13 @@ func init() {
 			rbac.NewRule("create").Groups(kAuthzGroup).Resources("subjectaccessreviews").RuleOrDie(),
 			rbac.NewRule("create").Groups(authzGroup).Resources("subjectaccessreviews").RuleOrDie(),
 			rbac.NewRule("get", "create", "update", "delete").Groups(templateGroup).Resources("brokertemplateinstances").RuleOrDie(),
+			rbac.NewRule("update").Groups(templateGroup).Resources("brokertemplateinstances/finalizers").RuleOrDie(),
 			rbac.NewRule("get", "create", "delete", "assign").Groups(templateGroup).Resources("templateinstances").RuleOrDie(),
 			rbac.NewRule("get", "list", "watch").Groups(templateGroup).Resources("templates").RuleOrDie(),
-			rbac.NewRule("get", "list", "create", "delete").Groups(kapiGroup).Resources("secrets").RuleOrDie(),
-			rbac.NewRule("list").Groups(kapiGroup).Resources("services", "configmaps").RuleOrDie(),
-			rbac.NewRule("list").Groups(routeGroup).Resources("routes").RuleOrDie(),
+			rbac.NewRule("get", "create", "delete").Groups(kapiGroup).Resources("secrets").RuleOrDie(),
+			rbac.NewRule("get").Groups(kapiGroup).Resources("services", "configmaps").RuleOrDie(),
+			rbac.NewRule("get").Groups(legacyRouteGroup).Resources("routes").RuleOrDie(),
+			rbac.NewRule("get").Groups(routeGroup).Resources("routes").RuleOrDie(),
 			eventsRule(),
 		},
 	})

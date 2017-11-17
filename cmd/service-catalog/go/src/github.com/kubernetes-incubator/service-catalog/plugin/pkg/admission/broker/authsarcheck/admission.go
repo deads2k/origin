@@ -23,11 +23,11 @@ import (
 	"github.com/golang/glog"
 	"github.com/kubernetes-incubator/service-catalog/pkg/apis/servicecatalog"
 
+	authorizationapi "k8s.io/api/authorization/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apiserver/pkg/admission"
 	kubeclientset "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/pkg/api/v1"
-	authorizationapi "k8s.io/client-go/pkg/apis/authorization/v1"
 
 	scadmission "github.com/kubernetes-incubator/service-catalog/pkg/apiserver/admission"
 )
@@ -71,28 +71,25 @@ func (s *sarcheck) Admit(a admission.Attributes) error {
 		return admission.NewForbidden(a, fmt.Errorf("not yet ready to handle request"))
 	}
 	// only care about brokers
-	if a.GetResource().Group != servicecatalog.GroupName || a.GetResource().GroupResource() != servicecatalog.Resource("servicebrokers") {
+	if a.GetResource().Group != servicecatalog.GroupName || a.GetResource().GroupResource() != servicecatalog.Resource("clusterservicebrokers") {
 		return nil
 	}
-	serviceBroker, ok := a.GetObject().(*servicecatalog.ServiceBroker)
+	clusterClusterServiceBroker, ok := a.GetObject().(*servicecatalog.ClusterServiceBroker)
 	if !ok {
-		return errors.NewBadRequest("Resource was marked with kind ServiceBroker, but was unable to be converted")
+		return errors.NewBadRequest("Resource was marked with kind ClusterServiceBroker, but was unable to be converted")
 	}
-	glog.V(5).Infof("Retrieved serviceBroker %v", serviceBroker)
+	glog.V(5).Infof("Retrieved clusterClusterServiceBroker %v", clusterClusterServiceBroker)
 
-	if serviceBroker.Spec.AuthInfo == nil {
+	if clusterClusterServiceBroker.Spec.AuthInfo == nil {
 		// no auth secret to check
 		return nil
 	}
 
-	var secretRef *v1.ObjectReference
-	if serviceBroker.Spec.AuthInfo.Basic != nil {
-		secretRef = serviceBroker.Spec.AuthInfo.Basic.SecretRef
-	} else if serviceBroker.Spec.AuthInfo.Bearer != nil {
-		secretRef = serviceBroker.Spec.AuthInfo.Bearer.SecretRef
-	} else if serviceBroker.Spec.AuthInfo.BasicAuthSecret != nil {
-		// TODO: this field is deprecated, remove in v1beta1
-		secretRef = serviceBroker.Spec.AuthInfo.BasicAuthSecret
+	var secretRef *servicecatalog.ObjectReference
+	if clusterClusterServiceBroker.Spec.AuthInfo.Basic != nil {
+		secretRef = clusterClusterServiceBroker.Spec.AuthInfo.Basic.SecretRef
+	} else if clusterClusterServiceBroker.Spec.AuthInfo.Bearer != nil {
+		secretRef = clusterClusterServiceBroker.Spec.AuthInfo.Bearer.SecretRef
 	}
 	userInfo := a.GetUserInfo()
 
@@ -101,20 +98,18 @@ func (s *sarcheck) Admit(a admission.Attributes) error {
 			ResourceAttributes: &authorizationapi.ResourceAttributes{
 				Namespace: secretRef.Namespace,
 				Verb:      "get",
-				Group:     v1.SchemeGroupVersion.Group,
-				Version:   v1.SchemeGroupVersion.Version,
-				Resource:  v1.ResourceSecrets.String(),
+				Group:     corev1.SchemeGroupVersion.Group,
+				Version:   corev1.SchemeGroupVersion.Version,
+				Resource:  corev1.ResourceSecrets.String(),
 				Name:      secretRef.Name,
 			},
 			User:   userInfo.GetName(),
 			Groups: userInfo.GetGroups(),
 			Extra:  convertToSARExtra(userInfo.GetExtra()),
-			// TODO: uncomment after rebase onto Kubernetes 1.8.
-			// See https://github.com/kubernetes/kubernetes/pull/49677
-			//UID:    userInfo.GetUID(),
+			UID:    userInfo.GetUID(),
 		},
 	}
-	sar, err := s.client.Authorization().SubjectAccessReviews().Create(sar)
+	sar, err := s.client.AuthorizationV1().SubjectAccessReviews().Create(sar)
 	if err != nil {
 		return err
 	}

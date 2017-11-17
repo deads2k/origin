@@ -87032,8 +87032,7 @@
    "com.github.openshift.origin.pkg.apps.apis.apps.v1.DeploymentConfig": {
     "description": "Deployment Configs define the template for a pod and manages deploying new images or configuration changes. A single deployment configuration is usually analogous to a single micro-service. Can support many different deployment patterns, including full restart, customizable rolling updates, and  fully custom behaviors, as well as pre- and post- deployment hooks. Each individual deployment is represented as a replication controller.\n\nA deployment is \"triggered\" when its configuration is changed or a tag in an Image Stream is changed. Triggers can be disabled to allow manual control over a deployment. The \"strategy\" determines how the deployment is carried out and may be changed at any time. The `latestVersion` field is updated when a new deployment is triggered by any means.",
     "required": [
-     "spec",
-     "status"
+     "spec"
     ],
     "properties": {
      "apiVersion": {
@@ -87192,12 +87191,6 @@
    },
    "com.github.openshift.origin.pkg.apps.apis.apps.v1.DeploymentConfigSpec": {
     "description": "DeploymentConfigSpec represents the desired state of the deployment.",
-    "required": [
-     "strategy",
-     "triggers",
-     "replicas",
-     "test"
-    ],
     "properties": {
      "minReadySeconds": {
       "description": "MinReadySeconds is the minimum number of seconds for which a newly created pod should be ready without any of its container crashing, for it to be considered available. Defaults to 0 (pod will be considered available as soon as it is ready)",
@@ -89272,7 +89265,7 @@
       "$ref": "#/definitions/com.github.openshift.origin.pkg.build.apis.build.v1.DockerBuildStrategy"
      },
      "jenkinsPipelineStrategy": {
-      "description": "JenkinsPipelineStrategy holds the parameters to the Jenkins Pipeline build strategy. This strategy is in tech preview.",
+      "description": "JenkinsPipelineStrategy holds the parameters to the Jenkins Pipeline build strategy.",
       "$ref": "#/definitions/com.github.openshift.origin.pkg.build.apis.build.v1.JenkinsPipelineBuildStrategy"
      },
      "sourceStrategy": {
@@ -89619,7 +89612,7 @@
     }
    },
    "com.github.openshift.origin.pkg.build.apis.build.v1.JenkinsPipelineBuildStrategy": {
-    "description": "JenkinsPipelineBuildStrategy holds parameters specific to a Jenkins Pipeline build. This strategy is in tech preview.",
+    "description": "JenkinsPipelineBuildStrategy holds parameters specific to a Jenkins Pipeline build.",
     "properties": {
      "env": {
       "description": "env contains additional environment variables you want to pass into a build pipeline.",
@@ -89699,17 +89692,6 @@
      "pullSecret": {
       "description": "pullSecret is the name of a Secret that would be used for setting up the authentication for pulling the Docker images from the private Docker registries",
       "$ref": "#/definitions/io.k8s.kubernetes.pkg.api.v1.LocalObjectReference"
-     },
-     "runtimeArtifacts": {
-      "description": "runtimeArtifacts specifies a list of source/destination pairs that will be copied from the builder to the runtime image. sourcePath can be a file or directory. destinationDir must be a directory. destinationDir can also be empty or equal to \".\", in this case it just refers to the root of WORKDIR. Deprecated: This feature will be removed in a future release. Use ImageSource to copy binary artifacts created from one build into a separate runtime image.",
-      "type": "array",
-      "items": {
-       "$ref": "#/definitions/com.github.openshift.origin.pkg.build.apis.build.v1.ImageSourcePath"
-      }
-     },
-     "runtimeImage": {
-      "description": "runtimeImage is an optional image that is used to run an application without unneeded dependencies installed. The building of the application is still done in the builder image but, post build, you can copy the needed artifacts in the runtime image for use. Deprecated: This feature will be removed in a future release. Use ImageSource to copy binary artifacts created from one build into a separate runtime image.",
-      "$ref": "#/definitions/io.k8s.kubernetes.pkg.api.v1.ObjectReference"
      },
      "scripts": {
       "description": "scripts is the location of Source scripts",
@@ -90344,7 +90326,9 @@
       "type": "array",
       "items": {
        "$ref": "#/definitions/com.github.openshift.origin.pkg.image.apis.image.v1.TagReference"
-      }
+      },
+      "x-kubernetes-patch-merge-key": "name",
+      "x-kubernetes-patch-strategy": "merge"
      }
     }
    },
@@ -90367,7 +90351,9 @@
       "type": "array",
       "items": {
        "$ref": "#/definitions/com.github.openshift.origin.pkg.image.apis.image.v1.NamedTagEventList"
-      }
+      },
+      "x-kubernetes-patch-merge-key": "tag",
+      "x-kubernetes-patch-strategy": "merge"
      }
     }
    },
@@ -90688,9 +90674,7 @@
    "com.github.openshift.origin.pkg.image.apis.image.v1.TagReference": {
     "description": "TagReference specifies optional annotations for images using this tag and an optional reference to an ImageStreamTag, ImageStreamImage, or DockerImage this tag should track.",
     "required": [
-     "name",
-     "annotations",
-     "generation"
+     "name"
     ],
     "properties": {
      "annotations": {

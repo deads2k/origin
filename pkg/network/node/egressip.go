@@ -51,8 +51,8 @@ type egressIPWatcher struct {
 	namespacesByVNID     map[uint32]*namespaceEgress
 	namespacesByEgressIP map[string]*namespaceEgress
 
-	localEgressLink      netlink.Link
-	localEgressIPMaskLen int
+	localEgressLink netlink.Link
+	localEgressNet  *net.IPNet
 
 	testModeChan chan string
 }
@@ -71,6 +71,12 @@ func newEgressIPWatcher(localIP string, oc *ovsController) *egressIPWatcher {
 }
 
 func (eip *egressIPWatcher) Start(networkClient networkclient.Interface, iptables *NodeIPTables) error {
+	var err error
+	if eip.localEgressLink, eip.localEgressNet, err = GetLinkDetails(eip.localIP); err != nil {
+		// Not expected, should already be caught by node.New()
+		return nil
+	}
+
 	eip.iptables = iptables
 	eip.networkClient = networkClient
 
@@ -245,46 +251,31 @@ func (eip *egressIPWatcher) deleteNamespaceEgress(vnid uint32) {
 }
 
 func (eip *egressIPWatcher) claimEgressIP(egressIP, egressHex string) error {
+	if egressIP == eip.localIP {
+		return fmt.Errorf("desired egress IP %q is the node IP", egressIP)
+	}
+
 	if eip.testModeChan != nil {
 		eip.testModeChan <- fmt.Sprintf("claim %s", egressIP)
 		return nil
 	}
 
-	if eip.localEgressLink == nil {
-		links, err := netlink.LinkList()
-		if err != nil {
-			return fmt.Errorf("could not get list of network interfaces while adding egress IP: %v", err)
-		}
-	linkLoop:
-		for _, link := range links {
-			addrs, err := netlink.AddrList(link, syscall.AF_INET)
-			if err != nil {
-				glog.Warningf("Could not get addresses of interface %q while trying to find egress interface: %v", link.Attrs().Name, err)
-				continue
-			}
-
-			for _, addr := range addrs {
-				if addr.IP.String() == eip.localIP {
-					eip.localEgressLink = link
-					eip.localEgressIPMaskLen, _ = addr.Mask.Size()
-					break linkLoop
-				}
-			}
-		}
-
-		if eip.localEgressLink == nil {
-			return fmt.Errorf("could not find network interface with the address %q while adding egress IP", eip.localIP)
-		}
-	}
-
-	egressIPNet := fmt.Sprintf("%s/%d", egressIP, eip.localEgressIPMaskLen)
+	localEgressIPMaskLen, _ := eip.localEgressNet.Mask.Size()
+	egressIPNet := fmt.Sprintf("%s/%d", egressIP, localEgressIPMaskLen)
 	addr, err := netlink.ParseAddr(egressIPNet)
 	if err != nil {
 		return fmt.Errorf("could not parse egress IP %q: %v", egressIPNet, err)
 	}
+	if !eip.localEgressNet.Contains(addr.IP) {
+		return fmt.Errorf("egress IP %q is not in local network %s of interface %s", egressIP, eip.localEgressNet.String(), eip.localEgressLink.Attrs().Name)
+	}
 	err = netlink.AddrAdd(eip.localEgressLink, addr)
 	if err != nil {
-		return fmt.Errorf("could not add egress IP %q to %s: %v", egressIPNet, eip.localEgressLink.Attrs().Name, err)
+		if err == syscall.EEXIST {
+			glog.V(2).Infof("Egress IP %q already exists on %s", egressIPNet, eip.localEgressLink.Attrs().Name)
+		} else {
+			return fmt.Errorf("could not add egress IP %q to %s: %v", egressIPNet, eip.localEgressLink.Attrs().Name, err)
+		}
 	}
 
 	if err := eip.iptables.AddEgressIPRules(egressIP, egressHex); err != nil {
@@ -295,16 +286,17 @@ func (eip *egressIPWatcher) claimEgressIP(egressIP, egressHex string) error {
 }
 
 func (eip *egressIPWatcher) releaseEgressIP(egressIP, egressHex string) error {
+	if egressIP == eip.localIP {
+		return nil
+	}
+
 	if eip.testModeChan != nil {
 		eip.testModeChan <- fmt.Sprintf("release %s", egressIP)
 		return nil
 	}
 
-	if eip.localEgressLink == nil {
-		return nil
-	}
-
-	egressIPNet := fmt.Sprintf("%s/%d", egressIP, eip.localEgressIPMaskLen)
+	localEgressIPMaskLen, _ := eip.localEgressNet.Mask.Size()
+	egressIPNet := fmt.Sprintf("%s/%d", egressIP, localEgressIPMaskLen)
 	addr, err := netlink.ParseAddr(egressIPNet)
 	if err != nil {
 		return fmt.Errorf("could not parse egress IP %q: %v", egressIPNet, err)

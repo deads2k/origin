@@ -11,6 +11,7 @@ import (
 
 	oapi "github.com/openshift/origin/pkg/api"
 	templateapi "github.com/openshift/origin/pkg/template/apis/template"
+	templateapiv1 "github.com/openshift/origin/pkg/template/apis/template/v1"
 	"github.com/openshift/origin/pkg/templateservicebroker/openservicebroker/api"
 )
 
@@ -21,17 +22,17 @@ const (
 // Map OpenShift template annotations to open service broker metadata field
 // community standards.
 var annotationMap = map[string]string{
-	oapi.OpenShiftDisplayName:                 api.ServiceMetadataDisplayName,
-	templateapi.IconClassAnnotation:           templateapi.ServiceMetadataIconClass,
-	templateapi.LongDescriptionAnnotation:     api.ServiceMetadataLongDescription,
-	templateapi.ProviderDisplayNameAnnotation: api.ServiceMetadataProviderDisplayName,
-	templateapi.DocumentationURLAnnotation:    api.ServiceMetadataDocumentationURL,
-	templateapi.SupportURLAnnotation:          api.ServiceMetadataSupportURL,
+	oapi.OpenShiftDisplayName:                   api.ServiceMetadataDisplayName,
+	oapi.OpenShiftLongDescriptionAnnotation:     api.ServiceMetadataLongDescription,
+	oapi.OpenShiftProviderDisplayNameAnnotation: api.ServiceMetadataProviderDisplayName,
+	oapi.OpenShiftDocumentationURLAnnotation:    api.ServiceMetadataDocumentationURL,
+	oapi.OpenShiftSupportURLAnnotation:          api.ServiceMetadataSupportURL,
+	templateapi.IconClassAnnotation:             templateapi.ServiceMetadataIconClass,
 }
 
 // serviceFromTemplate populates an open service broker service response from
 // an OpenShift template.
-func serviceFromTemplate(template *templateapi.Template) *api.Service {
+func serviceFromTemplate(template *templateapiv1.Template) *api.Service {
 	metadata := make(map[string]interface{})
 	for srcname, dstname := range annotationMap {
 		if value, ok := template.Annotations[srcname]; ok {
@@ -55,12 +56,14 @@ func serviceFromTemplate(template *templateapi.Template) *api.Service {
 		paramOrdering = append(paramOrdering, param.Name)
 	}
 
+	bindable := strings.ToLower(template.Annotations[templateapi.BindableAnnotation]) != "false"
+
 	plan := api.Plan{
 		ID:          string(template.UID), // TODO: this should be a unique value
 		Name:        "default",
 		Description: "Default plan",
 		Free:        true,
-		Bindable:    true,
+		Bindable:    bindable,
 		Schemas: api.Schema{
 			ServiceInstance: api.ServiceInstances{
 				Create: map[string]*jsschema.Schema{
@@ -106,7 +109,7 @@ func serviceFromTemplate(template *templateapi.Template) *api.Service {
 		ID:          string(template.UID),
 		Description: description,
 		Tags:        strings.Split(template.Annotations["tags"], ","),
-		Bindable:    true,
+		Bindable:    bindable,
 		Metadata:    metadata,
 		Plans:       []api.Plan{plan},
 	}

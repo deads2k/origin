@@ -18,17 +18,19 @@ import (
 )
 
 const (
-	// XBrokerAPIVersion is the header for the Open Service Broker API
-	// version.
+	// APIVersionHeader is the header value associated with the version of the Open
+	// Service Broker API version.
 	APIVersionHeader = "X-Broker-API-Version"
-	// XBrokerAPIOriginatingIdentity is the header for the originating identity
+	// OriginatingIdentityHeader is the header associated with originating
+	// identity.
 	OriginatingIdentityHeader = "X-Broker-API-Originating-Identity"
 
-	catalogURL            = "%s/v2/catalog"
-	serviceInstanceURLFmt = "%s/v2/service_instances/%s"
-	lastOperationURLFmt   = "%s/v2/service_instances/%s/last_operation"
-	bindingURLFmt         = "%s/v2/service_instances/%s/service_bindings/%s"
-	asyncQueryParamKey    = "accepts_incomplete"
+	catalogURL                 = "%s/v2/catalog"
+	serviceInstanceURLFmt      = "%s/v2/service_instances/%s"
+	lastOperationURLFmt        = "%s/v2/service_instances/%s/last_operation"
+	bindingLastOperationURLFmt = "%s/v2/service_instances/%s/service_bindings/%s/last_operation"
+	bindingURLFmt              = "%s/v2/service_instances/%s/service_bindings/%s"
+	asyncQueryParamKey         = "accepts_incomplete"
 )
 
 // NewClient is a CreateFunc for creating a new functional Client and
@@ -119,7 +121,7 @@ const (
 // message body, and executes the request, returning an http.Response or an
 // error.  Errors returned from this function represent http-layer errors and
 // not errors in the Open Service Broker API.
-func (c *client) prepareAndDo(method, URL string, params map[string]string, body interface{}, originatingIdentity *AlphaOriginatingIdentity) (*http.Response, error) {
+func (c *client) prepareAndDo(method, URL string, params map[string]string, body interface{}, originatingIdentity *OriginatingIdentity) (*http.Response, error) {
 	var bodyReader io.Reader
 
 	if body != nil {
@@ -151,7 +153,7 @@ func (c *client) prepareAndDo(method, URL string, params map[string]string, body
 		}
 	}
 
-	if c.EnableAlphaFeatures && originatingIdentity != nil {
+	if c.APIVersion.AtLeast(Version2_13()) && originatingIdentity != nil {
 		headerValue, err := buildOriginatingIdentityHeaderValue(originatingIdentity)
 		if err != nil {
 			return nil, err
@@ -214,7 +216,7 @@ func (c *client) handleFailureResponse(response *http.Response) error {
 	}
 }
 
-func buildOriginatingIdentityHeaderValue(i *AlphaOriginatingIdentity) (string, error) {
+func buildOriginatingIdentityHeaderValue(i *OriginatingIdentity) (string, error) {
 	if i == nil {
 		return "", nil
 	}
@@ -235,6 +237,28 @@ func buildOriginatingIdentityHeaderValue(i *AlphaOriginatingIdentity) (string, e
 func isValidJSON(s string) error {
 	var js json.RawMessage
 	return json.Unmarshal([]byte(s), &js)
+}
+
+// validateAlphaAPIMethodsAllowed returns an error if alpha API methods are not
+// allowed for this client.
+func (c *client) validateAlphaAPIMethodsAllowed() error {
+	if !c.EnableAlphaFeatures {
+		return AlphaAPIMethodsNotAllowedError{
+			reason: fmt.Sprintf("alpha features must be enabled"),
+		}
+	}
+
+	if !c.APIVersion.AtLeast(LatestAPIVersion()) {
+		return AlphaAPIMethodsNotAllowedError{
+			reason: fmt.Sprintf(
+				"must have latest API Version. Current: %s, Expected: %s",
+				c.APIVersion.label,
+				LatestAPIVersion().label,
+			),
+		}
+	}
+
+	return nil
 }
 
 // internal message body types

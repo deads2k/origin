@@ -41,16 +41,18 @@ func GetTestPassThroughToUpstream(ctx context.Context) bool {
 // It relies on the fact that blobDescriptorService requires higher levels to set repository object on given
 // context. If the object isn't given, its method will err out.
 func TestBlobDescriptorServiceIsApplied(t *testing.T) {
+	ctx := context.Background()
+	ctx = registrytest.WithTestLogger(ctx, t)
+
 	// don't do any authorization check
 	installFakeAccessController(t)
 	m := fakeBlobDescriptorService(t)
 	// to make other unit tests working
 	defer m.changeUnsetRepository(false)
 
-	fos, imageClient := registrytest.NewFakeOpenShiftWithClient()
+	fos, imageClient := registrytest.NewFakeOpenShiftWithClient(ctx)
 	testImage := registrytest.AddRandomImage(t, fos, "user", "app", "latest")
 
-	ctx := context.Background()
 	os.Setenv("OPENSHIFT_DEFAULT_REGISTRY", "localhost:5000")
 	app := NewApp(ctx, registryclient.NewFakeRegistryClient(imageClient), &configuration.Configuration{
 		Loglevel: "debug",
@@ -85,7 +87,7 @@ func TestBlobDescriptorServiceIsApplied(t *testing.T) {
 		t.Fatalf("error parsing server url: %v", err)
 	}
 
-	desc, _, err := registrytest.UploadRandomTestBlob(serverURL, nil, "user/app")
+	desc, _, err := registrytest.UploadRandomTestBlob(ctx, serverURL, nil, "user/app")
 	if err != nil {
 		t.Fatal(err)
 	}

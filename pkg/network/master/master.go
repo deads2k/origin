@@ -1,12 +1,10 @@
-// +build linux
-
 package master
 
 import (
 	"fmt"
 	"time"
 
-	log "github.com/golang/glog"
+	"github.com/golang/glog"
 
 	kapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,8 +20,11 @@ import (
 	osapivalidation "github.com/openshift/origin/pkg/network/apis/network/validation"
 	"github.com/openshift/origin/pkg/network/common"
 	networkclient "github.com/openshift/origin/pkg/network/generated/internalclientset"
-	"github.com/openshift/origin/pkg/network/node"
 	"github.com/openshift/origin/pkg/util/netutils"
+)
+
+const (
+	tun0 = "tun0"
 )
 
 type OsdnMaster struct {
@@ -43,7 +44,7 @@ func Start(networkConfig osconfigapi.MasterNetworkConfig, networkClient networkc
 		return nil
 	}
 
-	log.Infof("Initializing SDN master of type %q", networkConfig.NetworkPluginName)
+	glog.Infof("Initializing SDN master of type %q", networkConfig.NetworkPluginName)
 
 	master := &OsdnMaster{
 		kClient:           kClient,
@@ -54,21 +55,33 @@ func Start(networkConfig osconfigapi.MasterNetworkConfig, networkClient networkc
 
 	var err error
 	var clusterNetworkEntries []networkapi.ClusterNetworkEntry
-	for _, cidr := range networkConfig.ClusterNetworks {
-		clusterNetworkEntries = append(clusterNetworkEntries, networkapi.ClusterNetworkEntry{CIDR: cidr.CIDR, HostSubnetLength: cidr.HostSubnetLength})
+	for _, entry := range networkConfig.ClusterNetworks {
+		clusterNetworkEntries = append(clusterNetworkEntries, networkapi.ClusterNetworkEntry{CIDR: entry.CIDR, HostSubnetLength: entry.HostSubnetLength})
 	}
 	master.networkInfo, err = common.ParseNetworkInfo(clusterNetworkEntries, networkConfig.ServiceNetworkCIDR)
 	if err != nil {
 		return err
+	}
+	if len(clusterNetworkEntries) == 0 {
+		panic("No ClusterNetworks set in networkConfig; should have been defaulted in if not configured")
+	}
+
+	var parsedClusterNetworkEntries []networkapi.ClusterNetworkEntry
+	for _, entry := range master.networkInfo.ClusterNetworks {
+		parsedClusterNetworkEntries = append(parsedClusterNetworkEntries, networkapi.ClusterNetworkEntry{CIDR: entry.ClusterCIDR.String(), HostSubnetLength: entry.HostSubnetLength})
 	}
 
 	configCN := &networkapi.ClusterNetwork{
 		TypeMeta:   metav1.TypeMeta{Kind: "ClusterNetwork"},
 		ObjectMeta: metav1.ObjectMeta{Name: networkapi.ClusterNetworkDefault},
 
-		ClusterNetworks: clusterNetworkEntries,
-		ServiceNetwork:  networkConfig.ServiceNetworkCIDR,
+		ClusterNetworks: parsedClusterNetworkEntries,
+		ServiceNetwork:  master.networkInfo.ServiceNetwork.String(),
 		PluginName:      networkConfig.NetworkPluginName,
+
+		// Need to set these for backward compat
+		Network:          parsedClusterNetworkEntries[0].CIDR,
+		HostSubnetLength: parsedClusterNetworkEntries[0].HostSubnetLength,
 	}
 	osapivalidation.SetDefaultClusterNetwork(*configCN)
 
@@ -91,10 +104,10 @@ func Start(networkConfig osconfigapi.MasterNetworkConfig, networkClient networkc
 			if _, err = master.networkClient.Network().ClusterNetworks().Create(configCN); err != nil {
 				return false, err
 			}
-			log.Infof("Created ClusterNetwork %s", common.ClusterNetworkToString(configCN))
+			glog.Infof("Created ClusterNetwork %s", common.ClusterNetworkToString(configCN))
 
 			if err = master.checkClusterNetworkAgainstClusterObjects(); err != nil {
-				log.Errorf("WARNING: cluster contains objects incompatible with new ClusterNetwork: %v", err)
+				glog.Errorf("Cluster contains objects incompatible with new ClusterNetwork: %v", err)
 			}
 		} else {
 			configChanged, err := clusterNetworkChanged(configCN, existingCN)
@@ -105,15 +118,15 @@ func Start(networkConfig osconfigapi.MasterNetworkConfig, networkClient networkc
 				configCN.TypeMeta = existingCN.TypeMeta
 				configCN.ObjectMeta = existingCN.ObjectMeta
 				if err = master.checkClusterNetworkAgainstClusterObjects(); err != nil {
-					log.Errorf("ERROR: Attempting to modify cluster to excludes existing objects: %v", err)
+					glog.Errorf("Attempting to modify cluster to exclude existing objects: %v", err)
 					return false, err
 				}
 				if _, err = master.networkClient.Network().ClusterNetworks().Update(configCN); err != nil {
 					return false, err
 				}
-				log.Infof("Updated ClusterNetwork %s", common.ClusterNetworkToString(configCN))
+				glog.Infof("Updated ClusterNetwork %s", common.ClusterNetworkToString(configCN))
 			} else {
-				log.V(5).Infof("No change to ClusterNetwork %s", common.ClusterNetworkToString(configCN))
+				glog.V(5).Infof("No change to ClusterNetwork %s", common.ClusterNetworkToString(configCN))
 			}
 		}
 
@@ -147,7 +160,7 @@ func Start(networkConfig osconfigapi.MasterNetworkConfig, networkClient networkc
 }
 
 func (master *OsdnMaster) checkClusterNetworkAgainstLocalNetworks() error {
-	hostIPNets, _, err := netutils.GetHostIPNetworks([]string{node.Tun0})
+	hostIPNets, _, err := netutils.GetHostIPNetworks([]string{tun0})
 	if err != nil {
 		return err
 	}

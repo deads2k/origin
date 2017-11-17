@@ -274,6 +274,8 @@ openshift-cli-expose.1
 openshift-cli-extract.1
 openshift-cli-get.1
 openshift-cli-idle.1
+openshift-cli-image-mirror.1
+openshift-cli-image.1
 openshift-cli-import-app.json.1
 openshift-cli-import-image.1
 openshift-cli-import.1
@@ -355,6 +357,7 @@ openshift-ex-build-chain.1
 openshift-ex-config-patch.1
 openshift-ex-config.1
 openshift-ex-diagnostics.1
+openshift-ex-dockergc.1
 openshift-ex-ipfailover.1
 openshift-ex-options.1
 openshift-ex-prune-groups.1

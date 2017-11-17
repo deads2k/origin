@@ -24,9 +24,18 @@ type Service struct {
 	//
 	// See the Open Service Broker API spec for information on permissions.
 	Requires []string `json:"requires,omitempty"`
-	// Bindable represents whether a service is bindable.  May be overriden on
-	// a per-plan basis by the Plan.Bindable field.
+	// Bindable represents whether a service is bindable.  May be overridden
+	// on a per-plan basis by the Plan.Bindable field.
 	Bindable bool `json:"bindable"`
+	// BindingRetrievable is ALPHA and may change or disappear at any time.
+	// BindingRetrievable will only be provided if alpha features are
+	// enabled.
+	//
+	// BindingRetrievable represents whether fetching a service binding via
+	// a GET on the binding resource's endpoint
+	// (/v2/service_instances/instance-id/service_bindings/binding-id) is
+	// supported for all plans.
+	BindingRetrievable bool `json:"binding_retrievable,omitempty"`
 	// PlanUpdatable represents whether instances of this service may be
 	// updated to a different plan.  The serialized form 'plan_updateable' is
 	// a mistake that has become written into the API for backward
@@ -76,56 +85,54 @@ type Plan struct {
 	// facing content and display instructions.  Metadata may contain
 	// platform-conventional values.  Optional.
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
-	// AlphaParameterSchemas is ALPHA and may change or disappear at any time.
-	// AlphaParameterSchemas will only be provided if alpha features are
-	// enabled.
+	// ParameterSchemas requires a client API version >=2.13.
 	//
-	// AlphaParameterSchemas is a set of optional JSONSchemas that describe
+	// ParameterSchemas is a set of optional JSONSchemas that describe
 	// the expected parameters for creation and update of instances and
 	// creation of bindings.
-	AlphaParameterSchemas *AlphaParameterSchemas `json:"schemas,omitempty"`
+	ParameterSchemas *ParameterSchemas `json:"schemas,omitempty"`
 }
 
-// AlphaParameterSchemas is ALPHA and may change or disappear at any time.
+// ParameterSchemas requires a client API version >=2.13.
 //
-// AlphaParameterSchemas is a set of optional JSONSchemas that describe
+// ParameterSchemas is a set of optional JSONSchemas that describe
 // the expected parameters for creation and update of instances and
 // creation of bindings.
-type AlphaParameterSchemas struct {
-	ServiceInstances *AlphaServiceInstanceSchema `json:"service_instance,omitempty"`
-	ServiceBindings  *AlphaServiceBindingSchema  `json:"service_binding,omitempty"`
+type ParameterSchemas struct {
+	ServiceInstances *ServiceInstanceSchema `json:"service_instance,omitempty"`
+	ServiceBindings  *ServiceBindingSchema  `json:"service_binding,omitempty"`
 }
 
-// AlphaServiceInstanceSchema is ALPHA and may change or disappear at any time.
+// ServiceInstanceSchema requires a client API version >=2.13.
 //
-// AlphaServiceInstanceSchema represents a plan's schemas for creation and
+// ServiceInstanceSchema represents a plan's schemas for creation and
 // update of an API resource.
-type AlphaServiceInstanceSchema struct {
-	Create *AlphaInputParameters `json:"create,omitempty"`
-	Update *AlphaInputParameters `json:"update,omitempty"`
+type ServiceInstanceSchema struct {
+	Create *InputParameters `json:"create,omitempty"`
+	Update *InputParameters `json:"update,omitempty"`
 }
 
-// AlphaServiceBindingSchema is ALPHA and may change or disappear at any time.
+// ServiceBindingSchema requires a client API version >=2.13.
 //
-// AlphaServiceBindingSchema represents a plan's schemas for the parameters
+// ServiceBindingSchema represents a plan's schemas for the parameters
 // accepted for binding creation.
-type AlphaServiceBindingSchema struct {
-	Create *AlphaInputParameters `json:"create,omitempty"`
+type ServiceBindingSchema struct {
+	Create *InputParameters `json:"create,omitempty"`
 }
 
-// AlphaInputParameters is ALPHA and may change or dissappear at any time.
+// InputParameters requires a client API version >=2.13.
 //
-// AlphaInputParameters represents a schema for input parameters for creation or
+// InputParameters represents a schema for input parameters for creation or
 // update of an API resource.
-type AlphaInputParameters struct {
+type InputParameters struct {
 	Parameters interface{} `json:"parameters,omitempty"`
 }
 
-// AlphaOriginatingIdentity is ALPHA and may change or disappear at any time.
+// OriginatingIdentity requires a client API version >=2.13.
 //
-// AlphaOriginatingIdentity is used to pass to the broker service an identity from
+// OriginatingIdentity is used to pass to the broker service an identity from
 // the platform
-type AlphaOriginatingIdentity struct {
+type OriginatingIdentity struct {
 	// The name of the platform to which the user belongs
 	Platform string
 	// A serialized JSON object that describes the user in a way that makes
@@ -144,9 +151,11 @@ type ProvisionRequest struct {
 	// Service Broker API specification recommends using a GUID for this
 	// field.
 	InstanceID string `json:"instance_id"`
-	// AcceptsIncomple indicates whether the client can accept asynchronous
-	// provisioning.  If the broker does not support asynchronous provisioning
-	// of a service, it will reject a request with this field set to true.
+	// AcceptsIncomplete indicates whether the client can accept asynchronous
+	// provisioning. If the broker cannot fulfill a request synchronously and
+	// AcceptsIncomplete is set to false, the broker will reject the request.
+	// A broker may choose to response to a request with AcceptsIncomplete set
+	// to true either synchronously or asynchronously.
 	AcceptsIncomplete bool `json:"accepts_incomplete"`
 	// ServiceID is the ID of the service to provision a new instance of.
 	ServiceID string `json:"service_id"`
@@ -161,12 +170,13 @@ type ProvisionRequest struct {
 	// Parameters is a set of configuration options for the service instance.
 	// Optional.
 	Parameters map[string]interface{} `json:"parameters,omitempty"`
+	// Context requires a client API version >= 2.12.
+	//
 	// Context is platform-specific contextual information under which the
-	// service instance is to be provisioned.  Context was added in version
-	// 2.12 of the OSB API and is only sent for versions 2.12 or later.
+	// service instance is to be provisioned.
 	Context map[string]interface{} `json:"context,omitempty"`
 	// OriginatingIdentity is the identity on the platform of the user making this request.
-	OriginatingIdentity *AlphaOriginatingIdentity `json:"originatingIdentity,omitempty"`
+	OriginatingIdentity *OriginatingIdentity `json:"originatingIdentity,omitempty"`
 }
 
 // ProvisionResponse is sent in response to a provision call
@@ -180,11 +190,9 @@ type ProvisionResponse struct {
 	// OperationKey is an extra identifier supplied by the broker to identify
 	// asynchronous operations.
 	OperationKey *OperationKey `json:"operationKey,omitempty"`
-	// OriginatingIdentity is the identity on the platform of the user making this request.
-	OriginatingIdentity AlphaOriginatingIdentity
 }
 
-// OperationKeys may be returned by the broker in order to provide extra
+// OperationKey is an extra identifier from the broker in order to provide extra
 // identifiers for asynchronous operations.
 type OperationKey string
 
@@ -193,9 +201,11 @@ type OperationKey string
 type UpdateInstanceRequest struct {
 	// InstanceID is the ID of the instance to update.
 	InstanceID string `json:"instance_id"`
-	// AcceptsIncomple indicates whether the client can accept asynchronous
-	// provisioning.  If the broker does not support asynchronous provisioning
-	// of a service, it will reject a request with this field set to true.
+	// AcceptsIncomplete indicates whether the client can accept asynchronous
+	// updating of an instance. If the broker cannot fulfill a request
+	// synchronously and AcceptsIncomplete is set to false, the broker will reject
+	// the request. A broker may choose to response to a request with
+	// AcceptsIncomplete set to true either synchronously or asynchronously.
 	AcceptsIncomplete bool `json:"accepts_incomplete"`
 	// ServiceID is the ID of the service the instance is provisioned from.
 	ServiceID string `json:"service_id"`
@@ -207,8 +217,13 @@ type UpdateInstanceRequest struct {
 	// unset, indicates that the client does not wish to update the parameters
 	// for an instance.
 	Parameters map[string]interface{} `json:"parameters,omitempty"`
+	// Context requires a client API version >= 2.12.
+	//
+	// Context is platform-specific contextual information under which the
+	// service instance was created.
+	Context map[string]interface{} `json:"context,omitempty"`
 	// OriginatingIdentity is the identity on the platform of the user making this request.
-	OriginatingIdentity *AlphaOriginatingIdentity `json:"originatingIdentity,omitempty"`
+	OriginatingIdentity *OriginatingIdentity `json:"originatingIdentity,omitempty"`
 
 	// The OSB API also has a field called `previous_values` that contains:
 	// OrgID
@@ -233,21 +248,23 @@ type UpdateInstanceResponse struct {
 	OperationKey *OperationKey `json:"operationKey,omitempty"`
 }
 
-// Deprovision request represents a request to deprovision an instance of a
+// DeprovisionRequest represents a request to deprovision an instance of a
 // service.
 type DeprovisionRequest struct {
 	// InstanceID is the ID of the instance to deprovision.
 	InstanceID string `json:"instance_id"`
-	// AcceptsIncomple indicates whether the client can accept asynchronous
-	// provisioning.  If the broker does not support asynchronous provisioning
-	// of a service, it will reject a request with this field set to true.
+	// AcceptsIncomplete indicates whether the client can accept asynchronous
+	// deprovisioning. If the broker cannot fulfill a request synchronously and
+	// AcceptsIncomplete is set to false, the broker will reject the request.
+	// A broker may choose to response to a request with AcceptsIncomplete set
+	// to true either synchronously or asynchronously.
 	AcceptsIncomplete bool `json:"accepts_incomplete"`
 	// ServiceID is the ID of the service the instance is provisioned from.
-	ServiceID string `json:service_id"`
+	ServiceID string `json:"service_id"`
 	// PlanID is the ID of the plan the instance is provisioned from.
-	PlanID string `json:plan_id"`
+	PlanID string `json:"plan_id"`
 	// OriginatingIdentity is the identity on the platform of the user making this request.
-	OriginatingIdentity *AlphaOriginatingIdentity `json:"originatingIdentity,omitempty"`
+	OriginatingIdentity *OriginatingIdentity `json:"originatingIdentity,omitempty"`
 }
 
 // DeprovisionResponse represents a broker's response to a deprovision request.
@@ -277,7 +294,29 @@ type LastOperationRequest struct {
 	// supplied in the response to the original request.
 	OperationKey *OperationKey `json:"operation,omitempty"`
 	// OriginatingIdentity is the identity on the platform of the user making this request.
-	OriginatingIdentity *AlphaOriginatingIdentity `json:"originatingIdentity,omitempty"`
+	OriginatingIdentity *OriginatingIdentity `json:"originatingIdentity,omitempty"`
+}
+
+// BindingLastOperationRequest represents a request to a broker to give the
+// state of the action on a binding it is completing asynchronously.
+type BindingLastOperationRequest struct {
+	// InstanceID is the instance of the service to query the last operation
+	// for.
+	InstanceID string `json:"instance_id"`
+	// BindingID is the binding to query the last operation for.
+	BindingID string `json:"binding_id"`
+	// ServiceID is the ID of the service the instance is provisioned from.
+	// Optional, but recommended.
+	ServiceID *string `json:"service_id,omitempty"`
+	// PlanID is the ID of the plan the instance is provisioned from.
+	// Optional, but recommended.
+	PlanID *string `json:"plan_id,omitempty"`
+	// OperationKey is the operation key provided by the broker in the
+	// response to the initial request.  Optional, but must be sent if
+	// supplied in the response to the original request.
+	OperationKey *OperationKey `json:"operation,omitempty"`
+	// OriginatingIdentity is the identity on the platform of the user making this request.
+	OriginatingIdentity *OriginatingIdentity `json:"originatingIdentity,omitempty"`
 }
 
 // LastOperationResponse represents the broker response with the state of a
@@ -309,7 +348,16 @@ type BindRequest struct {
 	BindingID string `json:"binding_id"`
 	// InstanceID is the ID of the instance to bind to.
 	InstanceID string `json:"instance_id"`
-
+	// AcceptsIncomplete is an ALPHA API attribute and may change. Alpha
+	// features must be enabled and the client must be using the
+	// latest API Version in order to use this.
+	//
+	// AcceptsIncomplete indicates whether the client can accept asynchronous
+	// binding. If the broker cannot fulfill a request synchronously and
+	// AcceptsIncomplete is set to false, the broker will reject the request.
+	// A broker may choose to response to a request with AcceptsIncomplete set
+	// to true either synchronously or asynchronously.
+	AcceptsIncomplete bool `json:"accepts_incomplete"`
 	// ServiceID is the ID of the service the instance was provisioned from.
 	ServiceID string `json:"service_id"`
 	// PlanID is the ID of the plan the instance was provisioned from.
@@ -321,8 +369,13 @@ type BindRequest struct {
 	BindResource *BindResource `json:"bind_resource,omitempty"`
 	// Parameters is configuration parameters for the binding.  Optional.
 	Parameters map[string]interface{} `json:"parameters,omitempty"`
+	// Context requires a client API version >= 2.13.
+	//
+	// Context is platform-specific contextual information under which the
+	// service binding is to be created.
+	Context map[string]interface{} `json:"context,omitempty"`
 	// OriginatingIdentity is the identity on the platform of the user making this request.
-	OriginatingIdentity *AlphaOriginatingIdentity `json:"originatingIdentity,omitempty"`
+	OriginatingIdentity *OriginatingIdentity `json:"originatingIdentity,omitempty"`
 }
 
 // BindResource contains data for platform resources associated with a
@@ -334,6 +387,13 @@ type BindResource struct {
 
 // BindResponse represents a broker's response to a BindRequest.
 type BindResponse struct {
+	// Async is an ALPHA API attribute and may change. Alpha
+	// features must be enabled and the client must be using the
+	// latest API Version in order to use this.
+	//
+	// Async indicates whether the broker is handling the bind request
+	// asynchronously.
+	Async bool `json:"async"`
 	// Credentials is a free-form hash of credentials that can be used by
 	// applications or users to access the service.
 	Credentials map[string]interface{} `json:"credentials,omitempty"`
@@ -350,6 +410,13 @@ type BindResponse struct {
 	// CF-specific.  May only be supplied by a service that declares a
 	// requirement for the 'volume_mount' permission.
 	VolumeMounts []interface{} `json:"volume_mounts,omitempty"`
+	// OperationKey is an ALPHA API attribute and may change. Alpha
+	// features must be enabled and the client must be using the
+	// latest API Version in order to use this.
+	//
+	// OperationKey is an extra identifier supplied by the broker to identify
+	// asynchronous operations.
+	OperationKey *OperationKey `json:"operationKey,omitempty"`
 }
 
 // UnbindRequest represents a request to unbind a particular binding.
@@ -358,15 +425,69 @@ type UnbindRequest struct {
 	InstanceID string `json:"instance_id"`
 	// BindingID is the ID of the binding to delete.
 	BindingID string `json:"binding_id"`
+	// AcceptsIncomplete is an ALPHA API attribute and may change. Alpha
+	// features must be enabled and the client must be using the
+	// latest API Version in order to use this.
+	//
+	// AcceptsIncomplete indicates whether the client can accept asynchronous
+	// unbinding. If the broker cannot fulfill a request synchronously and
+	// AcceptsIncomplete is set to false, the broker will reject the request.
+	// A broker may choose to response to a request with AcceptsIncomplete set
+	// to true either synchronously or asynchronously.
+	AcceptsIncomplete bool `json:"accepts_incomplete"`
 	// ServiceID is the ID of the service the instance was provisioned from.
 	ServiceID string `json:"service_id"`
 	// PlanID is the ID of the plan the instance was provisioned from.
 	PlanID string `json:"plan_id"`
 	// OriginatingIdentity is the identity on the platform of the user making this request.
-	OriginatingIdentity *AlphaOriginatingIdentity `json:"originatingIdentity,omitempty"`
+	OriginatingIdentity *OriginatingIdentity `json:"originatingIdentity,omitempty"`
 }
 
 // UnbindResponse represents a broker's response to an UnbindRequest.
 type UnbindResponse struct {
-	// Currently, unbind responses have no fields.
+	// Async is an ALPHA API attribute and may change. Alpha
+	// features must be enabled and the client must be using the
+	// latest API Version in order to use this.
+	//
+	// Async indicates whether the broker is handling the unbind request
+	// asynchronously.
+	Async bool `json:"async"`
+	// OperationKey is an ALPHA API attribute and may change. Alpha
+	// features must be enabled and the client must be using the
+	// latest API Version in order to use this.
+	//
+	// OperationKey is an extra identifier supplied by the broker to identify
+	// asynchronous operations.
+	OperationKey *OperationKey `json:"operationKey,omitempty"`
+}
+
+// GetBindingRequest represents a request to do a GET on a particular binding.
+type GetBindingRequest struct {
+	// InstanceID is the ID of the instance the binding is for.
+	InstanceID string `json:"instance_id"`
+	// BindingID is the ID of the binding to delete.
+	BindingID string `json:"binding_id"`
+}
+
+// GetBindingResponse is sent as the response to doing a GET on a particular
+// binding.
+type GetBindingResponse struct {
+	// Credentials is a free-form hash of credentials that can be used by
+	// applications or users to access the service.
+	Credentials map[string]interface{} `json:"credentials,omitempty"`
+	// SyslogDrainURl is a URL to which logs must be streamed.  CF-specific.
+	// May only be supplied by a service that declares a requirement for the
+	// 'syslog_drain' permission.
+	SyslogDrainURL *string `json:"syslog_drain_url,omitempty"`
+	// RouteServiceURL is a URL to which the platform must proxy requests to
+	// the application the binding is for.  CF-specific.  May only be supplied
+	// by a service that declares a requirement for the 'route_service'
+	// permission.
+	RouteServiceURL *string `json:"route_service_url,omitempty"`
+	// VolumeMounts is an array of configuration string for mounting volumes.
+	// CF-specific.  May only be supplied by a service that declares a
+	// requirement for the 'volume_mount' permission.
+	VolumeMounts []interface{} `json:"volume_mounts,omitempty"`
+	// Parameters is configuration parameters for the binding.
+	Parameters map[string]interface{} `json:"parameters,omitempty"`
 }

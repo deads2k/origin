@@ -32,7 +32,7 @@ type HTTPStatusCodeError struct {
 	// Description is a human-readable description of the error that may be
 	// returned by the broker.
 	Description *string
-	// ResponseError is set to the error that occured when unmarshalling a
+	// ResponseError is set to the error that occurred when unmarshalling a
 	// response body from the broker.
 	ResponseError error
 }
@@ -87,10 +87,10 @@ func IsConflictError(err error) bool {
 	return statusCodeError.StatusCode == http.StatusConflict
 }
 
+// Constants are used to check for "Async" and "RequiresApp" errors and their messages
 const (
-	AsyncErrorMessage     = "AsyncRequired"
-	AsyncErrorDescription = "This service plan requires client support for asynchronous service operations."
-
+	AsyncErrorMessage               = "AsyncRequired"
+	AsyncErrorDescription           = "This service plan requires client support for asynchronous service operations."
 	AppGUIDRequiredErrorMessage     = "RequiresApp"
 	AppGUIDRequiredErrorDescription = "This service supports generation of credentials through binding an application only."
 )
@@ -141,4 +141,47 @@ func IsAppGUIDRequiredError(err error) bool {
 	}
 
 	return *statusCodeError.Description == AppGUIDRequiredErrorDescription
+}
+
+// AlphaAPIMethodsNotAllowedError is an error type signifying that alpha API
+// methods are not allowed for this client's API Version.
+type AlphaAPIMethodsNotAllowedError struct {
+	reason string
+}
+
+func (e AlphaAPIMethodsNotAllowedError) Error() string {
+	return fmt.Sprintf(
+		"alpha API methods not allowed: %s",
+		e.reason,
+	)
+}
+
+// GetBindingNotAllowedError is an error type signifying that doing a GET to
+// fetch a binding is not allowed for this client.
+type GetBindingNotAllowedError struct {
+	reason string
+}
+
+func (e GetBindingNotAllowedError) Error() string {
+	return fmt.Sprintf(
+		"GetBinding not allowed: %s",
+		e.reason,
+	)
+}
+
+// AsyncBindingOperationsNotAllowedError is an error type signifying that asynchronous
+// binding operations (bind/unbind/poll) are not allowed for this client.
+type AsyncBindingOperationsNotAllowedError struct {
+	reason string
+}
+
+func (e AsyncBindingOperationsNotAllowedError) Error() string {
+	return fmt.Sprintf("Asynchronous binding operations are not allowed: %s", e.reason)
+}
+
+// AsyncBindingOperationsNotAllowedError returns whether the error represents asynchronous
+// binding operations (bind/unbind/poll) not being allowed for this client.
+func IsAsyncBindingOperationsNotAllowedError(err error) bool {
+	_, ok := err.(AsyncBindingOperationsNotAllowedError)
+	return ok
 }

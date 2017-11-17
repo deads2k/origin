@@ -143,7 +143,7 @@ func NewTemplatePlugin(cfg TemplatePluginConfig, lookupSvc ServiceLookup) (*Temp
 func (p *TemplatePlugin) HandleEndpoints(eventType watch.EventType, endpoints *kapi.Endpoints) error {
 	key := endpointsKey(endpoints)
 
-	glog.V(4).Infof("Processing %d Endpoints for Name: %v (%v)", len(endpoints.Subsets), endpoints.Name, eventType)
+	glog.V(4).Infof("Processing %d Endpoints for %s/%s (%v)", len(endpoints.Subsets), endpoints.Namespace, endpoints.Name, eventType)
 
 	for i, s := range endpoints.Subsets {
 		glog.V(4).Infof("  Subset %d : %#v", i, s)
@@ -265,7 +265,6 @@ func createRouterEndpoints(endpoints *kapi.Endpoints, excludeUDP bool, lookupSvc
 		wasIdled = true
 	}
 
-	// Take a reasonable guess at the number of endpoints to avoid reallocating the out array when we append
 	out := make([]Endpoint, 0, len(endpoints.Subsets)*4)
 
 	// Now build the actual endpoints we pass to the template
@@ -305,12 +304,6 @@ func createRouterEndpoints(endpoints *kapi.Endpoints, excludeUDP bool, lookupSvc
 				out = append(out, ep)
 			}
 		}
-	}
-
-	// We want to disable endpoint checks if there is only one endpoint
-	// We skip the case where it is idled, since we set NoHealthCheck above
-	if wasIdled == false && len(out) == 1 {
-		out[0].NoHealthCheck = true
 	}
 
 	return out

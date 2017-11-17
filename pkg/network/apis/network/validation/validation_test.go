@@ -26,7 +26,7 @@ func TestValidateClusterNetwork(t *testing.T) {
 			expectedErrors: 0,
 		},
 		{
-			name: "Good one old network and hostsubnetlength set  ",
+			name: "Good one old network and hostsubnetlength set",
 			cn: &networkapi.ClusterNetwork{
 				ObjectMeta:       metav1.ObjectMeta{Name: "any"},
 				Network:          "10.20.0.0/16",
@@ -37,7 +37,29 @@ func TestValidateClusterNetwork(t *testing.T) {
 			expectedErrors: 0,
 		},
 		{
-			name: "only old network set ",
+			name: "old network set incorrectly",
+			cn: &networkapi.ClusterNetwork{
+				ObjectMeta:       metav1.ObjectMeta{Name: "any"},
+				Network:          "10.30.0.0/16",
+				HostSubnetLength: 8,
+				ClusterNetworks:  []networkapi.ClusterNetworkEntry{{CIDR: "10.20.0.0/16", HostSubnetLength: 8}},
+				ServiceNetwork:   "172.30.0.0/16",
+			},
+			expectedErrors: 1,
+		},
+		{
+			name: "old hostsubnetlength set incorrectly",
+			cn: &networkapi.ClusterNetwork{
+				ObjectMeta:       metav1.ObjectMeta{Name: "any"},
+				Network:          "10.20.0.0/16",
+				HostSubnetLength: 9,
+				ClusterNetworks:  []networkapi.ClusterNetworkEntry{{CIDR: "10.20.0.0/16", HostSubnetLength: 8}},
+				ServiceNetwork:   "172.30.0.0/16",
+			},
+			expectedErrors: 1,
+		},
+		{
+			name: "only old network set",
 			cn: &networkapi.ClusterNetwork{
 				ObjectMeta:      metav1.ObjectMeta{Name: "any"},
 				Network:         "10.20.0.0/16",
@@ -47,7 +69,7 @@ func TestValidateClusterNetwork(t *testing.T) {
 			expectedErrors: 1,
 		},
 		{
-			name: "only old hostsubnetlength set ",
+			name: "only old hostsubnetlength set",
 			cn: &networkapi.ClusterNetwork{
 				ObjectMeta:       metav1.ObjectMeta{Name: "any"},
 				HostSubnetLength: 8,
@@ -154,6 +176,24 @@ func TestValidateClusterNetwork(t *testing.T) {
 			},
 			expectedErrors: 1,
 		},
+		{
+			name: "IPv6 ClusterNetwork",
+			cn: &networkapi.ClusterNetwork{
+				ObjectMeta:      metav1.ObjectMeta{Name: "any"},
+				ClusterNetworks: []networkapi.ClusterNetworkEntry{{CIDR: "fe80:1234::/64", HostSubnetLength: 8}},
+				ServiceNetwork:  "172.30.0.0/16",
+			},
+			expectedErrors: 1,
+		},
+		{
+			name: "IPv6 ServiceNetwork",
+			cn: &networkapi.ClusterNetwork{
+				ObjectMeta:      metav1.ObjectMeta{Name: "any"},
+				ClusterNetworks: []networkapi.ClusterNetworkEntry{{CIDR: "10.20.0.0/16", HostSubnetLength: 8}},
+				ServiceNetwork:  "fe80:1234::/64",
+			},
+			expectedErrors: 1,
+		},
 	}
 
 	for _, tc := range tests {
@@ -167,10 +207,12 @@ func TestValidateClusterNetwork(t *testing.T) {
 
 func TestSetDefaultClusterNetwork(t *testing.T) {
 	defaultClusterNetwork := networkapi.ClusterNetwork{
-		ObjectMeta:      metav1.ObjectMeta{Name: networkapi.ClusterNetworkDefault},
-		ClusterNetworks: []networkapi.ClusterNetworkEntry{{CIDR: "10.20.0.0/16", HostSubnetLength: 8}},
-		ServiceNetwork:  "172.30.0.0/16",
-		PluginName:      "redhat/openshift-ovs-multitenant",
+		ObjectMeta:       metav1.ObjectMeta{Name: networkapi.ClusterNetworkDefault},
+		ClusterNetworks:  []networkapi.ClusterNetworkEntry{{CIDR: "10.20.0.0/16", HostSubnetLength: 8}},
+		ServiceNetwork:   "172.30.0.0/16",
+		PluginName:       "redhat/openshift-ovs-multitenant",
+		Network:          "10.20.0.0/16",
+		HostSubnetLength: 8,
 	}
 	SetDefaultClusterNetwork(defaultClusterNetwork)
 
@@ -187,52 +229,84 @@ func TestSetDefaultClusterNetwork(t *testing.T) {
 		{
 			name: "Wrong Network",
 			cn: &networkapi.ClusterNetwork{
-				ObjectMeta:      metav1.ObjectMeta{Name: networkapi.ClusterNetworkDefault},
-				ClusterNetworks: []networkapi.ClusterNetworkEntry{{CIDR: "10.30.0.0/16", HostSubnetLength: 8}},
-				ServiceNetwork:  "172.30.0.0/16",
-				PluginName:      "redhat/openshift-ovs-multitenant",
+				ObjectMeta:       metav1.ObjectMeta{Name: networkapi.ClusterNetworkDefault},
+				ClusterNetworks:  []networkapi.ClusterNetworkEntry{{CIDR: "10.30.0.0/16", HostSubnetLength: 8}},
+				ServiceNetwork:   "172.30.0.0/16",
+				PluginName:       "redhat/openshift-ovs-multitenant",
+				Network:          "10.30.0.0/16",
+				HostSubnetLength: 8,
 			},
-			expectedErrors: 1,
+			expectedErrors: 2,
 		},
 		{
 			name: "Additional Network",
 			cn: &networkapi.ClusterNetwork{
-				ObjectMeta:      metav1.ObjectMeta{Name: networkapi.ClusterNetworkDefault},
-				ClusterNetworks: []networkapi.ClusterNetworkEntry{{CIDR: "10.20.0.0/16", HostSubnetLength: 8}, {CIDR: "10.30.0.0/16", HostSubnetLength: 8}},
-				ServiceNetwork:  "172.30.0.0/16",
-				PluginName:      "redhat/openshift-ovs-multitenant",
+				ObjectMeta:       metav1.ObjectMeta{Name: networkapi.ClusterNetworkDefault},
+				ClusterNetworks:  []networkapi.ClusterNetworkEntry{{CIDR: "10.20.0.0/16", HostSubnetLength: 8}, {CIDR: "10.30.0.0/16", HostSubnetLength: 8}},
+				ServiceNetwork:   "172.30.0.0/16",
+				PluginName:       "redhat/openshift-ovs-multitenant",
+				Network:          "10.20.0.0/16",
+				HostSubnetLength: 8,
 			},
 			expectedErrors: 1,
 		},
 		{
 			name: "Wrong HostSubnetLength",
 			cn: &networkapi.ClusterNetwork{
-				ObjectMeta:      metav1.ObjectMeta{Name: networkapi.ClusterNetworkDefault},
-				ClusterNetworks: []networkapi.ClusterNetworkEntry{{CIDR: "10.20.0.0/16", HostSubnetLength: 9}},
-				ServiceNetwork:  "172.30.0.0/16",
-				PluginName:      "redhat/openshift-ovs-multitenant",
+				ObjectMeta:       metav1.ObjectMeta{Name: networkapi.ClusterNetworkDefault},
+				ClusterNetworks:  []networkapi.ClusterNetworkEntry{{CIDR: "10.20.0.0/16", HostSubnetLength: 9}},
+				ServiceNetwork:   "172.30.0.0/16",
+				PluginName:       "redhat/openshift-ovs-multitenant",
+				Network:          "10.20.0.0/16",
+				HostSubnetLength: 9,
 			},
-			expectedErrors: 1,
+			expectedErrors: 2,
 		},
 		{
 			name: "Wrong ServiceNetwork",
 			cn: &networkapi.ClusterNetwork{
-				ObjectMeta:      metav1.ObjectMeta{Name: networkapi.ClusterNetworkDefault},
-				ClusterNetworks: []networkapi.ClusterNetworkEntry{{CIDR: "10.20.0.0/16", HostSubnetLength: 8}},
-				ServiceNetwork:  "172.20.0.0/16",
-				PluginName:      "redhat/openshift-ovs-multitenant",
+				ObjectMeta:       metav1.ObjectMeta{Name: networkapi.ClusterNetworkDefault},
+				ClusterNetworks:  []networkapi.ClusterNetworkEntry{{CIDR: "10.20.0.0/16", HostSubnetLength: 8}},
+				ServiceNetwork:   "172.20.0.0/16",
+				PluginName:       "redhat/openshift-ovs-multitenant",
+				Network:          "10.20.0.0/16",
+				HostSubnetLength: 8,
 			},
 			expectedErrors: 1,
 		},
 		{
 			name: "Wrong PluginName",
 			cn: &networkapi.ClusterNetwork{
+				ObjectMeta:       metav1.ObjectMeta{Name: networkapi.ClusterNetworkDefault},
+				ClusterNetworks:  []networkapi.ClusterNetworkEntry{{CIDR: "10.20.0.0/16", HostSubnetLength: 8}},
+				ServiceNetwork:   "172.30.0.0/16",
+				PluginName:       "redhat/openshift-ovs-subnet",
+				Network:          "10.20.0.0/16",
+				HostSubnetLength: 8,
+			},
+			expectedErrors: 1,
+		},
+		{
+			name: "Wrong legacy Network",
+			cn: &networkapi.ClusterNetwork{
+				ObjectMeta:       metav1.ObjectMeta{Name: networkapi.ClusterNetworkDefault},
+				ClusterNetworks:  []networkapi.ClusterNetworkEntry{{CIDR: "10.20.0.0/16", HostSubnetLength: 8}},
+				ServiceNetwork:   "172.30.0.0/16",
+				PluginName:       "redhat/openshift-ovs-multitenant",
+				Network:          "10.30.0.0/16",
+				HostSubnetLength: 8,
+			},
+			expectedErrors: 2,
+		},
+		{
+			name: "Missing legacy fields",
+			cn: &networkapi.ClusterNetwork{
 				ObjectMeta:      metav1.ObjectMeta{Name: networkapi.ClusterNetworkDefault},
 				ClusterNetworks: []networkapi.ClusterNetworkEntry{{CIDR: "10.20.0.0/16", HostSubnetLength: 8}},
 				ServiceNetwork:  "172.30.0.0/16",
-				PluginName:      "redhat/openshift-ovs-subnet",
+				PluginName:      "redhat/openshift-ovs-multitenant",
 			},
-			expectedErrors: 1,
+			expectedErrors: 4,
 		},
 	}
 
@@ -331,6 +405,34 @@ func TestValidateHostSubnet(t *testing.T) {
 			},
 			expectedErrors: 2,
 		},
+		{
+			name: "IPv6 subnet",
+			hs: &networkapi.HostSubnet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "abc.def.com",
+				},
+				Host:   "abc.def.com",
+				HostIP: "10.20.30.40",
+				Subnet: "fe80:1234::/64",
+			},
+			expectedErrors: 1,
+		},
+		{
+			name: "IPv6 EgressIP",
+			hs: &networkapi.HostSubnet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "abc.def.com",
+				},
+				Host:   "abc.def.com",
+				HostIP: "10.20.30.40",
+				Subnet: "8.8.8.0/24",
+				EgressIPs: []string{
+					"192.168.1.99",
+					"1234::5678",
+				},
+			},
+			expectedErrors: 1,
+		},
 	}
 
 	for _, tc := range tests {
@@ -412,9 +514,9 @@ func TestValidateNetNamespace(t *testing.T) {
 				},
 				NetName:   "abc",
 				NetID:     12345,
-				EgressIPs: []string{"example.com", ""},
+				EgressIPs: []string{"example.com", "", "1234::5678"},
 			},
-			expectedErrors: 2,
+			expectedErrors: 3,
 		},
 	}
 
@@ -614,6 +716,27 @@ func TestValidateEgressNetworkPolicy(t *testing.T) {
 				},
 			},
 			expectedErrors: 1,
+		},
+		{
+			// IPv6 CIDRSelectors are currently useless, but they don't break anything
+			name: "IPv6 CIDR",
+			fw: &networkapi.EgressNetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "default",
+					Namespace: "testing",
+				},
+				Spec: networkapi.EgressNetworkPolicySpec{
+					Egress: []networkapi.EgressNetworkPolicyRule{
+						{
+							Type: networkapi.EgressNetworkPolicyRuleAllow,
+							To: networkapi.EgressNetworkPolicyPeer{
+								CIDRSelector: "fe80::/64",
+							},
+						},
+					},
+				},
+			},
+			expectedErrors: 0,
 		},
 	}
 

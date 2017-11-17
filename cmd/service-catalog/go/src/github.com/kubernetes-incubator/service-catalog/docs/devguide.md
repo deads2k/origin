@@ -25,8 +25,9 @@ layout:
     │   └── catalog             # Helm chart for deploying the service catalog
     │   └── ups-broker          # Helm chart for deploying the user-provided service broker
     ├── cmd                     # Contains "main" Go packages for each service catalog component binary
-    │   └── apiserver           # The service catalog API server binary
-    │   └── controller-manager  # The service catalog controller manager binary
+    │   └── apiserver           # The service catalog API server service-catalog command
+    │   └── controller-manager  # The service catalog controller manager service-catalog command
+    │   └── service-catalog     # The service catalog binary, which is used to run commands
     ├── contrib                 # Contains examples, non-essential golang source, CI configurations, etc
     │   └── build               # Dockerfiles for contrib images (example: ups-broker)
     │   └── cmd                 # Entrypoints for contrib binaries
@@ -81,7 +82,7 @@ also need:
 
 * A working Kubernetes cluster and `kubectl` installed in your local `PATH`,
   properly configured to access that cluster. The version of Kubernetes and
-  `kubectl` must be >= 1.6. See below for instructions on how to download these
+  `kubectl` must be >= 1.7. See below for instructions on how to download these
   versions of `kubectl`
 * [Helm](https://helm.sh) (Tiller) installed in your Kubernetes cluster and the
   `helm` binary in your `PATH`
@@ -166,8 +167,8 @@ To deploy to Kubernetes, see the
 
     * `pkg/client/*_generated`
     * `pkg/apis/servicecatalog/zz_*`
-    * `pkg/apis/servicecatalog/v1alpha1/zz_*`
-    * `pkg/apis/servicecatalog/v1alpha1/types.generated.go`
+    * `pkg/apis/servicecatalog/v1beta1/zz_*`
+    * `pkg/apis/servicecatalog/v1beta1/types.generated.go`
     * `pkg/openapi/openapi_generated.go`
 
 * Running `make clean` or `make clean-generated` will roll back (via
@@ -213,6 +214,15 @@ or you can specify a regexp expression for the test name:
 
     $ UNIT_TESTS=TestBar* make test
 
+a regexp expression also works for integration test names:
+
+    $ INT_TESTS=TestIntegrateBar* make test
+
+You can also set the log level for the tests, which is useful for
+debugging using the `TEST_LOG_LEVEL` env variable. Log level 5 e.g.:
+
+    $ TEST_LOG_LEVEL=5 make test-integration
+
 To see how well these tests cover the source code, you can use:
 
     $ make coverage
@@ -229,14 +239,14 @@ most contributors who hack on service catalog components will wish to produce
 custom-built images, but will be unable to push to this location, it can be
 overridden through use of the `REGISTRY` environment variable.
 
-Examples of apiserver image names:
+Examples of service-catalog image names:
 
 | `REGISTRY` | Fully Qualified Image Name | Notes |
 |----------|----------------------------|-------|
-| Unset; default | `quay.io/kubernetes-service-catalog/apiserver` | You probably don't have permissions to push to here |
-| Dockerhub username + trailing slash, e.g. `krancour/` | `krancour/apiserver` | Missing hostname == Dockerhub |
-| Dockerhub username + slash + some prefix, e.g. `krancour/sc-` | `krancour/sc-apiserver` | The prefix is useful for disambiguating similarly names images within a single namespace. |
-| 192.168.99.102:5000/ | `192.168.99.102:5000/apiserver` | A local registry |
+| Unset; default | `quay.io/kubernetes-service-catalog/service-catalog` | You probably don't have permissions to push to here |
+| Dockerhub username + trailing slash, e.g. `krancour/` | `krancour/service-catalog` | Missing hostname == Dockerhub |
+| Dockerhub username + slash + some prefix, e.g. `krancour/sc-` | `krancour/sc-service-catalog` | The prefix is useful for disambiguating similarly names images within a single namespace. |
+| 192.168.99.102:5000/ | `192.168.99.102:5000/service-catalog` | A local registry |
 
 With `REGISTRY` set appropriately:
 
@@ -265,20 +275,16 @@ release, you probably want to deploy the canary images. Always use the
 canary images when testing local changes.
 
 For more information see the
-[installation instructions](./install-1.7.md). The last two lines of
+[installation instructions](./install.md). The last two lines of
 the following `helm install` example show the canary images being
 installed with the other standard installation options.
 
+From the root of this repository:
+
 ```
-helm install ../charts/catalog \
-    --name ${HELM_RELEASE_NAME} --namespace ${SVCCAT_NAMESPACE} \
-    --set apiserver.auth.enabled=true \
-    --set useAggregator=true \
-    --set apiserver.tls.ca=$(base64 --wrap 0 ${SC_SERVING_CA}) \
-    --set apiserver.tls.cert=$(base64 --wrap 0 ${SC_SERVING_CERT}) \
-    --set apiserver.tls.key=$(base64 --wrap 0 ${SC_SERVING_KEY}) \
-    --set apiserver.image=quay.io/kubernetes-service-catalog/apiserver:canary \
-    --set controllerManager.image=quay.io/kubernetes-service-catalog/controller-manager:canary
+helm install charts/catalog \
+    --name catalog --namespace catalog \
+    --set image=quay.io/kubernetes-service-catalog/service-catalog:canary
 ```
 
 If you choose etcd storage, the helm chart will launch an etcd server for you

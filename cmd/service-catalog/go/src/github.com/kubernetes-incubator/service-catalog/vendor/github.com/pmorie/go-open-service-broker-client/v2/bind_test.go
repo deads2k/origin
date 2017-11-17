@@ -17,6 +17,12 @@ func defaultBindRequest() *BindRequest {
 	}
 }
 
+func defaultAsyncBindRequest() *BindRequest {
+	r := defaultBindRequest()
+	r.AcceptsIncomplete = true
+	return r
+}
+
 const defaultBindRequestBody = `{"service_id":"test-service-id","plan_id":"test-plan-id"}`
 
 const successBindResponseBody = `{
@@ -30,6 +36,10 @@ const successBindResponseBody = `{
   }
 }`
 
+const successAsyncBindResponseBody = `{
+  "operation": "test-operation-key"
+}`
+
 func successBindResponse() *BindResponse {
 	return &BindResponse{
 		Credentials: map[string]interface{}{
@@ -40,6 +50,13 @@ func successBindResponse() *BindResponse {
 			"port":     float64(3306),
 			"database": "dbname",
 		},
+	}
+}
+
+func successBindResponseAsync() *BindResponse {
+	return &BindResponse{
+		Async:        true,
+		OperationKey: &testOperation,
 	}
 }
 
@@ -58,11 +75,22 @@ func optionalFieldsBindRequest() *BindRequest {
 
 const optionalFieldsBindRequestBody = `{"service_id":"test-service-id","plan_id":"test-plan-id","parameters":{"blu":2,"foo":"bar"},"bind_resource":{"app_guid":"test-app-guid","route":"test-app-guid"}}`
 
+func contextBindRequest() *BindRequest {
+	r := defaultBindRequest()
+	r.Context = map[string]interface{}{
+		"foo": "bar",
+	}
+	return r
+}
+
+const contextBindRequestBody = `{"service_id":"test-service-id","plan_id":"test-plan-id","context":{"foo":"bar"}}`
+
 func TestBind(t *testing.T) {
 	cases := []struct {
 		name                string
+		version             APIVersion
 		enableAlpha         bool
-		originatingIdentity *AlphaOriginatingIdentity
+		originatingIdentity *OriginatingIdentity
 		request             *BindRequest
 		httpChecks          httpChecks
 		httpReaction        httpReaction
@@ -108,11 +136,35 @@ func TestBind(t *testing.T) {
 			expectedResponse: successBindResponse(),
 		},
 		{
+			name:        "success - asynchronous",
+			version:     LatestAPIVersion(),
+			enableAlpha: true,
+			request:     defaultAsyncBindRequest(),
+			httpChecks: httpChecks{
+				params: map[string]string{
+					asyncQueryParamKey: "true",
+				},
+			},
+			httpReaction: httpReaction{
+				status: http.StatusAccepted,
+				body:   successAsyncBindResponseBody,
+			},
+			expectedResponse: successBindResponseAsync(),
+		},
+		{
 			name: "http error",
 			httpReaction: httpReaction{
 				err: fmt.Errorf("http error"),
 			},
 			expectedErrMessage: "http error",
+		},
+		{
+			name: "202 with no async support",
+			httpReaction: httpReaction{
+				status: http.StatusAccepted,
+				body:   successAsyncBindResponseBody,
+			},
+			expectedErrMessage: "Status: 202; ErrorMessage: <nil>; Description: <nil>; ResponseError: <nil>",
 		},
 		{
 			name: "200 with malformed response",
@@ -136,11 +188,37 @@ func TestBind(t *testing.T) {
 				status: http.StatusInternalServerError,
 				body:   conventionalFailureResponseBody,
 			},
-			expectedErr: testHttpStatusCodeError(),
+			expectedErr: testHTTPStatusCodeError(),
+		},
+		{
+			name:    "context included if API version >= 2.13",
+			version: Version2_13(),
+			request: contextBindRequest(),
+			httpChecks: httpChecks{
+				body: contextBindRequestBody,
+			},
+			httpReaction: httpReaction{
+				status: http.StatusCreated,
+				body:   successBindResponseBody,
+			},
+			expectedResponse: successBindResponse(),
+		},
+		{
+			name:    "context not included if API version < 2.13",
+			version: Version2_12(),
+			request: contextBindRequest(),
+			httpChecks: httpChecks{
+				body: defaultBindRequestBody,
+			},
+			httpReaction: httpReaction{
+				status: http.StatusCreated,
+				body:   successBindResponseBody,
+			},
+			expectedResponse: successBindResponse(),
 		},
 		{
 			name:                "originating identity included",
-			enableAlpha:         true,
+			version:             Version2_13(),
 			originatingIdentity: testOriginatingIdentity,
 			httpChecks:          httpChecks{headers: map[string]string{OriginatingIdentityHeader: testOriginatingIdentityHeaderValue}},
 			httpReaction: httpReaction{
@@ -151,7 +229,7 @@ func TestBind(t *testing.T) {
 		},
 		{
 			name:                "originating identity excluded",
-			enableAlpha:         true,
+			version:             Version2_13(),
 			originatingIdentity: nil,
 			httpChecks:          httpChecks{headers: map[string]string{OriginatingIdentityHeader: ""}},
 			httpReaction: httpReaction{
@@ -161,8 +239,8 @@ func TestBind(t *testing.T) {
 			expectedResponse: successBindResponse(),
 		},
 		{
-			name:                "originating identity not sent unless alpha enabled",
-			enableAlpha:         false,
+			name:                "originating identity not sent unless API Version >= 2.13",
+			version:             Version2_12(),
 			originatingIdentity: testOriginatingIdentity,
 			httpChecks:          httpChecks{headers: map[string]string{OriginatingIdentityHeader: ""}},
 			httpReaction: httpReaction{
@@ -170,6 +248,20 @@ func TestBind(t *testing.T) {
 				body:   successBindResponseBody,
 			},
 			expectedResponse: successBindResponse(),
+		},
+		{
+			name:               "async with alpha features disabled",
+			version:            LatestAPIVersion(),
+			enableAlpha:        false,
+			request:            defaultAsyncBindRequest(),
+			expectedErrMessage: "Asynchronous binding operations are not allowed: alpha API methods not allowed: alpha features must be enabled",
+		},
+		{
+			name:               "async with unsupported API version",
+			version:            Version2_12(),
+			enableAlpha:        true,
+			request:            defaultAsyncBindRequest(),
+			expectedErrMessage: "Asynchronous binding operations are not allowed: alpha API methods not allowed: must have latest API Version. Current: 2.12, Expected: 2.13",
 		},
 	}
 
@@ -188,8 +280,11 @@ func TestBind(t *testing.T) {
 			tc.httpChecks.body = defaultBindRequestBody
 		}
 
-		version := Version2_11()
-		klient := newTestClient(t, tc.name, version, tc.enableAlpha, tc.httpChecks, tc.httpReaction)
+		if tc.version.label == "" {
+			tc.version = Version2_11()
+		}
+
+		klient := newTestClient(t, tc.name, tc.version, tc.enableAlpha, tc.httpChecks, tc.httpReaction)
 
 		response, err := klient.Bind(tc.request)
 

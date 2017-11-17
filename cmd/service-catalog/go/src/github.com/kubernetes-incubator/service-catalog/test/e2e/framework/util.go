@@ -28,8 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -99,18 +99,18 @@ func LoadConfig(config, context string) (*rest.Config, error) {
 // unique identifier of the e2e run
 var RunId = uuid.NewUUID()
 
-func CreateKubeNamespace(baseName string, c kubernetes.Interface) (*v1.Namespace, error) {
-	ns := &v1.Namespace{
+func CreateKubeNamespace(baseName string, c kubernetes.Interface) (*corev1.Namespace, error) {
+	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("e2e-tests-%v-", baseName),
 		},
 	}
 	Logf("namespace: %v", ns)
 	// Be robust about making the namespace creation call.
-	var got *v1.Namespace
+	var got *corev1.Namespace
 	err := wait.PollImmediate(Poll, defaultTimeout, func() (bool, error) {
 		var err error
-		got, err = c.Core().Namespaces().Create(ns)
+		got, err = c.CoreV1().Namespaces().Create(ns)
 		if err != nil {
 			Logf("Unexpected error while creating namespace: %v", err)
 			return false, nil
@@ -124,7 +124,7 @@ func CreateKubeNamespace(baseName string, c kubernetes.Interface) (*v1.Namespace
 }
 
 func DeleteKubeNamespace(c kubernetes.Interface, namespace string) error {
-	return c.Core().Namespaces().Delete(namespace, nil)
+	return c.CoreV1().Namespaces().Delete(namespace, nil)
 }
 
 func ExpectNoError(err error, explain ...interface{}) {
@@ -136,8 +136,8 @@ func ExpectNoError(err error, explain ...interface{}) {
 
 // Waits default amount of time (PodStartTimeout) for the specified pod to become running.
 // Returns an error if timeout occurs first, or pod goes in to failed state.
-func WaitForPodRunningInNamespace(c kubernetes.Interface, pod *v1.Pod) error {
-	if pod.Status.Phase == v1.PodRunning {
+func WaitForPodRunningInNamespace(c kubernetes.Interface, pod *corev1.Pod) error {
+	if pod.Status.Phase == corev1.PodRunning {
 		return nil
 	}
 	return waitTimeoutForPodRunningInNamespace(c, pod.Name, pod.Namespace, defaultTimeout)
@@ -171,14 +171,14 @@ func endpointAvailable(c kubernetes.Interface, namespace, name string) wait.Cond
 
 func podRunning(c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		pod, err := c.Core().Pods(namespace).Get(podName, metav1.GetOptions{})
+		pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
 		switch pod.Status.Phase {
-		case v1.PodRunning:
+		case corev1.PodRunning:
 			return true, nil
-		case v1.PodFailed, v1.PodSucceeded:
+		case corev1.PodFailed, corev1.PodSucceeded:
 			return false, fmt.Errorf("pod ran to completion")
 		}
 		return false, nil

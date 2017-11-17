@@ -551,6 +551,9 @@ func GetOpenshiftBootstrapClusterRoles() []rbac.ClusterRole {
 				rbac.NewRule("list").Groups(kapiGroup).Resources("limitranges").RuleOrDie(),
 				rbac.NewRule("get", "list").Groups(buildGroup, legacyBuildGroup).Resources("buildconfigs", "builds").RuleOrDie(),
 				rbac.NewRule("get", "list").Groups(deployGroup, legacyDeployGroup).Resources("deploymentconfigs").RuleOrDie(),
+				rbac.NewRule("get", "list").Groups(extensionsGroup).Resources("daemonsets").RuleOrDie(),
+				rbac.NewRule("get", "list").Groups(extensionsGroup).Resources("deployments").RuleOrDie(),
+				rbac.NewRule("get", "list").Groups(extensionsGroup).Resources("replicasets").RuleOrDie(),
 
 				rbac.NewRule("delete").Groups(imageGroup, legacyImageGroup).Resources("images").RuleOrDie(),
 				rbac.NewRule("get", "list").Groups(imageGroup, legacyImageGroup).Resources("images", "imagestreams").RuleOrDie(),
@@ -775,6 +778,7 @@ func GetOpenshiftBootstrapClusterRoles() []rbac.ClusterRole {
 				rbac.NewRule("create").Groups(imageGroup, legacyImageGroup).Resources("imagestreamimports").RuleOrDie(),
 				rbac.NewRule("get", "update").Groups(imageGroup, legacyImageGroup).Resources("imagestreams/layers").RuleOrDie(),
 				rbac.NewRule(readWrite...).Groups(authzGroup, legacyAuthzGroup).Resources("rolebindings", "roles").RuleOrDie(),
+				rbac.NewRule(readWrite...).Groups(rbacGroup).Resources("roles", "rolebindings").RuleOrDie(),
 				rbac.NewRule("create").Groups(authzGroup, legacyAuthzGroup).Resources("localresourceaccessreviews", "localsubjectaccessreviews", "subjectrulesreviews").RuleOrDie(),
 				rbac.NewRule("create").Groups(kAuthzGroup).Resources("localsubjectaccessreviews").RuleOrDie(),
 

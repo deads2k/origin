@@ -18,13 +18,14 @@ spec:
         app: {{ template "fullname" . }}-apiserver
         chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
         release: "{{ .Release.Name }}"
+        releaseRevision: "{{ .Release.Revision }}"
         heritage: "{{ .Release.Service }}"
     spec:
       serviceAccountName: "{{ .Values.apiserver.serviceAccount }}"
       containers:
       - name: apiserver
-        image: {{ .Values.apiserver.image }}
-        imagePullPolicy: {{ .Values.apiserver.imagePullPolicy }}
+        image: {{ .Values.image }}
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
         resources:
           requests:
             cpu: 100m
@@ -33,12 +34,13 @@ spec:
             cpu: 100m
             memory: 30Mi
         args:
+        - apiserver
         {{ if .Values.apiserver.audit.activated -}}
         - --audit-log-path
         - {{ .Values.apiserver.audit.logPath }}
         {{- end}}
         - --admission-control
-        - "KubernetesNamespaceLifecycle,DefaultServicePlan,ServiceInstanceCredentialsLifecycle,ServicePlanChangeValidator,BrokerAuthSarCheck"
+        - "KubernetesNamespaceLifecycle,DefaultServicePlan,ServiceBindingsLifecycle,ServicePlanChangeValidator,BrokerAuthSarCheck"
         - --secure-port
         - "8443"
         - --storage-type

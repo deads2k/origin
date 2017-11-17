@@ -344,10 +344,6 @@ backend be_secure:{{$cfgIdx}}
     {{- end }}
     {{- with $value := firstMatch $timeSpecPattern (index $cfg.Annotations "haproxy.router.openshift.io/timeout")}}
   timeout server  {{$value}}
-    {{- end }} {{/* end balance algorithm setting. */}}
-
-    {{- with $value := firstMatch $timeSpecPattern (index $cfg.Annotations "haproxy.router.openshift.io/timeout") }}
-  timeout server  {{$value}}
     {{- end }}
 
     {{- if isTrue (index $cfg.Annotations "haproxy.router.openshift.io/rate-limit-connections") }}
@@ -390,9 +386,11 @@ backend be_secure:{{$cfgIdx}}
     {{- end }}
   {{- end }}{{/* end disable cookies check */}}
 
-  {{- with $hsts := firstMatch $hstsPattern (index $cfg.Annotations "haproxy.router.openshift.io/hsts_header") }}
+  {{- if matchValues (print $cfg.TLSTermination) "edge" "reencrypt" }}
+    {{- with $hsts := firstMatch $hstsPattern (index $cfg.Annotations "haproxy.router.openshift.io/hsts_header") }}
   http-response set-header Strict-Transport-Security {{$hsts}}
-  {{- end }}{{/* hsts header */}}
+    {{- end }}{{/* hsts header */}}
+  {{- end }}{{/* is "edge" or "reencrypt" */}}
 
   {{- range $serviceUnitName, $weight := $cfg.ServiceUnitNames }}
     {{- if ne $weight 0 }}
@@ -412,10 +410,8 @@ backend be_secure:{{$cfgIdx}}
           {{- else if or (eq $cfg.TLSTermination "") (eq $cfg.TLSTermination "edge") }}
           {{- end }}{{/* end type specific options*/}}
 
-            {{- if not $endpoint.NoHealthCheck }} check inter {{firstMatch $timeSpecPattern (index $cfg.Annotations "router.openshift.io/haproxy.health.check.interval") (env "ROUTER_BACKEND_CHECK_INTERVAL") "5000ms"}}
+            {{- if and (not $endpoint.NoHealthCheck) (gt $cfg.ActiveEndpoints 1) }} check inter {{firstMatch $timeSpecPattern (index $cfg.Annotations "router.openshift.io/haproxy.health.check.interval") (env "ROUTER_BACKEND_CHECK_INTERVAL") "5000ms"}}
             {{- end }}{{/* end else no health check */}}
-
-
           {{- end }}{{/* end if cg.TLSTermination */}}
         {{- end }}{{/* end range processEndpointsForAlias */}}
       {{- end }}{{/* end get serviceUnit from its name */}}
@@ -466,7 +462,7 @@ backend be_tcp:{{$cfgIdx}}
         {{- with $serviceUnit := index $.ServiceUnits $serviceUnitName }}
           {{- range $idx, $endpoint := processEndpointsForAlias $cfg $serviceUnit (env "ROUTER_BACKEND_PROCESS_ENDPOINTS" "") }}
   server {{$endpoint.ID}} {{$endpoint.IP}}:{{$endpoint.Port}} weight {{$weight}}
-            {{- if not $endpoint.NoHealthCheck }} check inter {{firstMatch $timeSpecPattern (index $cfg.Annotations "router.openshift.io/haproxy.health.check.interval") (env "ROUTER_BACKEND_CHECK_INTERVAL") "5000ms"}}
+            {{- if and (not $endpoint.NoHealthCheck) (gt $cfg.ActiveEndpoints 1) }} check inter {{firstMatch $timeSpecPattern (index $cfg.Annotations "router.openshift.io/haproxy.health.check.interval") (env "ROUTER_BACKEND_CHECK_INTERVAL") "5000ms"}}
             {{- end }}{{/* end else no health check */}}
           {{- end }}{{/* end range processEndpointsForAlias */}}
         {{- end }}{{/* end get ServiceUnit from serviceUnitName */}}

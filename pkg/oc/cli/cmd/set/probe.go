@@ -19,7 +19,6 @@ import (
 	kcmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 	"k8s.io/kubernetes/pkg/kubectl/resource"
 
-	cmdutil "github.com/openshift/origin/pkg/cmd/util"
 	"github.com/openshift/origin/pkg/cmd/util/clientcmd"
 )
 
@@ -131,7 +130,7 @@ func NewCmdProbe(fullName string, f *clientcmd.Factory, out, errOut io.Writer) *
 			kcmdutil.CheckErr(options.Validate())
 			if err := options.Run(); err != nil {
 				// TODO: move me to kcmdutil
-				if err == cmdutil.ErrExit {
+				if err == kcmdutil.ErrExit {
 					os.Exit(1)
 				}
 				kcmdutil.CheckErr(err)
@@ -337,12 +336,12 @@ func (o *ProbeOptions) Run() error {
 
 		obj, err := resource.NewHelper(info.Client, info.Mapping).Patch(info.Namespace, info.Name, types.StrategicMergePatchType, patch.Patch)
 		if err != nil {
-			handlePodUpdateError(o.Err, err, "probes")
-
 			// if no port was specified, inform that one must be provided
 			if len(o.HTTPGet) > 0 && len(o.HTTPGetAction.Port.String()) == 0 {
-				fmt.Fprintf(o.Err, "\nA port must be specified as part of a url (http://127.0.0.1:3306).\nSee 'oc set probe -h' for help and examples.\n")
+				fmt.Fprintf(o.Err, "A port must be specified as part of a url (http://127.0.0.1:3306).\n\nSee 'oc set probe -h' for help and examples.\n")
 			}
+			handlePodUpdateError(o.Err, err, "probes")
+
 			failed = true
 			continue
 		}
@@ -351,7 +350,7 @@ func (o *ProbeOptions) Run() error {
 		kcmdutil.PrintSuccess(o.Mapper, o.ShortOutput, o.Out, info.Mapping.Resource, info.Name, false, "updated")
 	}
 	if failed {
-		return cmdutil.ErrExit
+		return kcmdutil.ErrExit
 	}
 	return nil
 }

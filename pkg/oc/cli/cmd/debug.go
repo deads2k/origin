@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kapierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
@@ -272,21 +273,6 @@ func (o *DebugOptions) Complete(cmd *cobra.Command, f *clientcmd.Factory, args [
 	if len(output) != 0 {
 		o.Print = func(pod *kapi.Pod, out io.Writer) error {
 			return f.PrintObject(cmd, false, mapper, pod, out)
-		}
-	}
-
-	// if a nodeName was specified, ensure node exists
-	if len(o.NodeName) > 0 {
-		r := f.NewBuilder(true).
-			NamespaceParam(cmdNamespace).
-			SingleResourceType().
-			ResourceTypeOrNameArgs(true, []string{"nodes", o.NodeName}...).
-			Flatten().
-			Do()
-
-		_, err := r.Infos()
-		if err != nil {
-			return err
 		}
 	}
 
@@ -615,6 +601,9 @@ func (o *DebugOptions) transformPodForDebug(annotations map[string]string) (*kap
 	pod.UID = ""
 	pod.CreationTimestamp = metav1.Time{}
 	pod.SelfLink = ""
+
+	// clear pod ownerRefs
+	pod.ObjectMeta.OwnerReferences = []v1.OwnerReference{}
 
 	return pod, originalCommand
 }

@@ -3,6 +3,7 @@ package controller
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -395,13 +396,6 @@ func (c *TemplateInstanceController) instantiate(templateInstance *templateapi.T
 		return err
 	}
 
-	// We label all objects we create - this is needed by the template service
-	// broker.
-	if template.ObjectLabels == nil {
-		template.ObjectLabels = make(map[string]string)
-	}
-	template.ObjectLabels[templateapi.TemplateInstanceLabel] = templateInstance.Name
-
 	if secret != nil {
 		for i, param := range template.Parameters {
 			if value, ok := secret.Data[param.Name]; ok {
@@ -436,15 +430,19 @@ func (c *TemplateInstanceController) instantiate(templateInstance *templateapi.T
 
 	// We add an OwnerReference to all objects we create - this is also needed
 	// by the template service broker for cleanup.
+	blockOwnerDeletion := true
+	templateInstanceOwnerRef := metav1.OwnerReference{
+		APIVersion:         templateapiv1.SchemeGroupVersion.String(),
+		Kind:               "TemplateInstance",
+		Name:               templateInstance.Name,
+		UID:                templateInstance.UID,
+		BlockOwnerDeletion: &blockOwnerDeletion,
+	}
+
 	for _, obj := range template.Objects {
 		meta, _ := meta.Accessor(obj)
 		ref := meta.GetOwnerReferences()
-		ref = append(ref, metav1.OwnerReference{
-			APIVersion: templateapiv1.SchemeGroupVersion.String(),
-			Kind:       "TemplateInstance",
-			Name:       templateInstance.Name,
-			UID:        templateInstance.UID,
-		})
+		ref = append(ref, templateInstanceOwnerRef)
 		meta.SetOwnerReferences(ref)
 	}
 
@@ -505,8 +503,11 @@ func (c *TemplateInstanceController) instantiate(templateInstance *templateapi.T
 				return nil, err
 			}
 
-			if meta.GetLabels()[templateapi.TemplateInstanceLabel] == templateInstance.Name {
-				createObj, createErr = obj, nil
+			for _, ownerRef := range meta.GetOwnerReferences() {
+				if reflect.DeepEqual(ownerRef, templateInstanceOwnerRef) {
+					createObj, createErr = obj, nil
+					break
+				}
 			}
 		}
 

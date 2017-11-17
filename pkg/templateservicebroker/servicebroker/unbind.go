@@ -1,18 +1,20 @@
 package servicebroker
 
 import (
+	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/golang/glog"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
-	"k8s.io/kubernetes/pkg/apis/authorization"
+	authorizationv1 "k8s.io/kubernetes/pkg/apis/authorization/v1"
 
-	"github.com/openshift/origin/pkg/authorization/util"
 	templateapi "github.com/openshift/origin/pkg/template/apis/template"
 	"github.com/openshift/origin/pkg/templateservicebroker/openservicebroker/api"
+	"github.com/openshift/origin/pkg/templateservicebroker/util"
 )
 
 // Unbind is the reverse of Bind.  Currently it simply removes the binding ID
@@ -31,7 +33,7 @@ func (b *Broker) Unbind(u user.Info, instanceID, bindingID string) *api.Response
 
 	namespace := brokerTemplateInstance.Spec.TemplateInstance.Namespace
 
-	if err := util.Authorize(b.kc.Authorization().SubjectAccessReviews(), u, &authorization.ResourceAttributes{
+	if err := util.Authorize(b.kc.Authorization().SubjectAccessReviews(), u, &authorizationv1.ResourceAttributes{
 		Namespace: namespace,
 		Verb:      "get",
 		Group:     templateapi.GroupName,
@@ -39,6 +41,14 @@ func (b *Broker) Unbind(u user.Info, instanceID, bindingID string) *api.Response
 		Name:      brokerTemplateInstance.Spec.TemplateInstance.Name,
 	}); err != nil {
 		return api.Forbidden(err)
+	}
+
+	templateInstance, err := b.templateclient.TemplateInstances(namespace).Get(brokerTemplateInstance.Spec.TemplateInstance.Name, metav1.GetOptions{})
+	if err != nil {
+		return api.InternalServerError(err)
+	}
+	if strings.ToLower(templateInstance.Spec.Template.Annotations[templateapi.BindableAnnotation]) == "false" {
+		return api.BadRequest(errors.New("provisioned service is not bindable"))
 	}
 
 	// The OSB API requires this function to be idempotent (restartable).  If
@@ -55,7 +65,7 @@ func (b *Broker) Unbind(u user.Info, instanceID, bindingID string) *api.Response
 	if status == http.StatusOK { // binding found; remove it
 		// end users are not expected to have access to BrokerTemplateInstance
 		// objects; SAR on the TemplateInstance instead.
-		if err := util.Authorize(b.kc.Authorization().SubjectAccessReviews(), u, &authorization.ResourceAttributes{
+		if err := util.Authorize(b.kc.Authorization().SubjectAccessReviews(), u, &authorizationv1.ResourceAttributes{
 			Namespace: namespace,
 			Verb:      "update",
 			Group:     templateapi.GroupName,
