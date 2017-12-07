@@ -91,7 +91,7 @@ func (f *Factory) PrintResourceInfos(cmd *cobra.Command, isLocal bool, infos []*
 	}
 
 	printAsList := len(infos) != 1
-	object, err := AsVersionedObject(infos, printAsList, schema.GroupVersion{}, legacyscheme.Codecs.LegacyCodec())
+	object, err := AsVersionedObject(infos, printAsList, schema.GroupVersion{Version: "v1"}, legacyscheme.Codecs.LegacyCodec())
 	if err != nil {
 		return err
 	}
@@ -114,6 +114,7 @@ func AsVersionedObject(infos []*resource.Info, forceList bool, version schema.Gr
 		object = objects[0]
 	} else {
 		object = &api.List{Items: objects}
+
 		converted, err := tryConvert(legacyscheme.Scheme, object, version, legacyscheme.Registry.GroupOrDie(api.GroupName).GroupVersion)
 		if err != nil {
 			return nil, err
