@@ -67,6 +67,7 @@ func NewCmdPatch(name, fullName string, f *clientcmd.Factory, out io.Writer) *co
 	cmd.Flags().StringVarP(&o.Patch, "patch", "p", "", "The patch to be applied to the resource JSON file.")
 	cmd.MarkFlagRequired("patch")
 	cmd.Flags().String("type", "strategic", fmt.Sprintf("The type of patch being provided; one of %v", sets.StringKeySet(patchTypes).List()))
+	cmdutil.AddPrinterFlags(cmd)
 
 	return cmd
 }
@@ -135,6 +136,7 @@ func (o *PatchOptions) RunPatch() error {
 
 	r := o.Builder.
 		FilenameParam(false, &resource.FilenameOptions{Recursive: false, Filenames: []string{o.Filename}}).
+		Internal().
 		Flatten().
 		Do()
 	err = r.Err()
