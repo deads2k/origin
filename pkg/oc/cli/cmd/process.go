@@ -16,7 +16,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
-	kapi "k8s.io/kubernetes/pkg/api"
+	"k8s.io/kubernetes/pkg/api/legacyscheme"
+	kapi "k8s.io/kubernetes/pkg/apis/core"
 	"k8s.io/kubernetes/pkg/kubectl"
 	"k8s.io/kubernetes/pkg/kubectl/cmd/templates"
 	kcmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
@@ -177,7 +178,7 @@ func RunProcess(f *clientcmd.Factory, in io.Reader, out, errout io.Writer, cmd *
 
 	if local {
 		// TODO: Change f.Object() so that it can fall back to local RESTMapper safely (currently glog.Fatals)
-		mapper = kapi.Registry.RESTMapper()
+		mapper = legacyscheme.Registry.RESTMapper()
 		// client is deliberately left nil
 	} else {
 		templateClient, err := f.OpenshiftInternalTemplateClient()
@@ -221,7 +222,9 @@ func RunProcess(f *clientcmd.Factory, in io.Reader, out, errout io.Writer, cmd *
 		templateObj.CreationTimestamp = metav1.Now()
 		infos = append(infos, &resource.Info{Object: templateObj})
 	} else {
-		infos, err = f.NewBuilder(!local).
+		infos, err = f.NewBuilder().
+			Internal().
+			LocalParam(local).
 			FilenameParam(explicit, &resource.FilenameOptions{Recursive: false, Filenames: []string{filename}}).
 			Do().
 			Infos()
@@ -307,7 +310,7 @@ func RunProcess(f *clientcmd.Factory, in io.Reader, out, errout io.Writer, cmd *
 	if outputFormat == "describe" {
 		if s, err := (&describe.TemplateDescriber{
 			MetadataAccessor: meta.NewAccessor(),
-			ObjectTyper:      kapi.Scheme,
+			ObjectTyper:      legacyscheme.Scheme,
 			ObjectDescriber:  nil,
 		}).DescribeTemplate(resultObj); err != nil {
 			return fmt.Errorf("error describing %q: %v\n", obj.Name, err)
@@ -318,7 +321,7 @@ func RunProcess(f *clientcmd.Factory, in io.Reader, out, errout io.Writer, cmd *
 	}
 	objects = append(objects, resultObj.Objects...)
 
-	p, err := f.PrinterForCommand(cmd, local, nil, kprinters.PrintOptions{})
+	p, err := f.PrinterForOptions(kcmdutil.ExtractCmdPrintOptions(cmd, false))
 	if err != nil {
 		return err
 	}
@@ -334,7 +337,7 @@ func RunProcess(f *clientcmd.Factory, in io.Reader, out, errout io.Writer, cmd *
 	}
 	// Prefer the Kubernetes core group for the List over the template.openshift.io
 	version.Group = kapi.GroupName
-	p = kprinters.NewVersionedPrinter(p, kapi.Scheme, version)
+	p = kprinters.NewVersionedPrinter(p, legacyscheme.Scheme, version)
 
 	// use generic output
 	if kcmdutil.GetFlagBool(cmd, "raw") {
