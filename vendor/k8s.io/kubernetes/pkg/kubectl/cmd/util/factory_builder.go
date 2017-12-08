@@ -25,6 +25,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"k8s.io/kubernetes/staging/src/k8s.io/apimachinery/pkg/util/errors"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -113,15 +115,29 @@ func (f *ring2Factory) PrintObject(cmd *cobra.Command, isLocal bool, mapper meta
 	if err != nil {
 		return err
 	}
-	// Prefer the existing external version if specified
-	var preferredVersion []string
-	if gvks[0].Version != "" && gvks[0].Version != runtime.APIVersionInternal {
-		preferredVersion = []string{gvks[0].Version}
+
+	var errs []error
+	var mapping *meta.RESTMapping
+
+	for _, gvk := range gvks {
+		// Prefer the existing external version if specified
+		var preferredVersion []string
+		if len(gvk.Version) > 0 && gvk.Version != runtime.APIVersionInternal {
+			preferredVersion = []string{gvk.Version}
+		}
+
+		m, err := mapper.RESTMapping(gvk.GroupKind(), preferredVersion...)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+
+		mapping = m
+		break
 	}
 
-	mapping, err := mapper.RESTMapping(gvks[0].GroupKind(), preferredVersion...)
-	if err != nil {
-		return err
+	if mapping == nil {
+		return errors.NewAggregate(errs)
 	}
 
 	printer, err := f.PrinterForMapping(ExtractCmdPrintOptions(cmd, false), mapping)

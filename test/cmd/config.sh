@@ -19,29 +19,29 @@ trap os::test::junit::reconcile_output EXIT
 # check to make sure that "get"ting a resource with no config file present
 # still returns error indicating that no config-file is set
 os::test::junit::declare_suite_start "cmd/configuration"
-os::cmd::expect_success_and_not_text 'oc get bc' 'does not exist'
+os::cmd::expect_success_and_not_text 'oc get buildconfig' 'does not exist'
 (
   export HOME=/tmp
   unset KUBECONFIG
   unset KUBERNETES_MASTER
 
-  os::cmd::expect_failure_and_text 'env -u KUBERNETES_SERVICE_HOST oc get bc --user=""' 'Missing or incomplete configuration info'
-  os::cmd::expect_failure_and_text 'env -u KUBERNETES_SERVICE_HOST oc get bc --context=""' 'Missing or incomplete configuration info'
-  os::cmd::expect_failure_and_text 'env -u KUBERNETES_SERVICE_HOST oc get bc --cluster=""' 'Missing or incomplete configuration info'
+  os::cmd::expect_failure_and_text 'env -u KUBERNETES_SERVICE_HOST oc get buildconfig --user=""' 'Missing or incomplete configuration info'
+  os::cmd::expect_failure_and_text 'env -u KUBERNETES_SERVICE_HOST oc get buildconfig --context=""' 'Missing or incomplete configuration info'
+  os::cmd::expect_failure_and_text 'env -u KUBERNETES_SERVICE_HOST oc get buildconfig --cluster=""' 'Missing or incomplete configuration info'
 
-  os::cmd::expect_failure_and_text 'env -u KUBERNETES_SERVICE_HOST oc get bc --context="test"' 'context "test" does not exist'
-  os::cmd::expect_failure_and_text 'env -u KUBERNETES_SERVICE_HOST oc get bc --cluster="test"' 'cluster "test" does not exist'
-  os::cmd::expect_failure_and_text 'env -u KUBERNETES_SERVICE_HOST oc get bc --user="test"' 'auth info "test" does not exist'
+  os::cmd::expect_failure_and_text 'env -u KUBERNETES_SERVICE_HOST oc get buildconfig --context="test"' 'context was not found for specified context\: test'
+  os::cmd::expect_failure_and_text 'env -u KUBERNETES_SERVICE_HOST oc get buildconfig --user="test"' 'auth info "test" does not exist'
+  os::cmd::expect_failure_and_text 'env -u KUBERNETES_SERVICE_HOST oc get buildconfig --cluster="test"' 'no server found for cluster \"test\"'
 
-  os::cmd::expect_failure_and_text 'oc get bc --config=missing' 'missing: no such file or directory'
+  os::cmd::expect_failure_and_text 'oc get buildconfig --config=missing' 'missing: no such file or directory'
 
   # define temp location for new config
   NEW_CONFIG_LOC="${BASETMPDIR}/new-config.yaml"
 
   # make sure non-existing --cluster and --user can still be set
   os::cmd::expect_success_and_text "oc config set-context new-context-name --cluster=missing-cluster --user=missing-user --namespace=default --config='${NEW_CONFIG_LOC}'" 'Context "new-context-name" '
-  os::cmd::expect_failure_and_text "env -u KUBERNETES_SERVICE_HOST -u KUBECONFIG -u KUBERNETES_MASTER oc get bc --config='${NEW_CONFIG_LOC}'" 'Missing or incomplete configuration info'
-  os::cmd::expect_failure_and_text "env -u KUBERNETES_SERVICE_HOST oc get bc --config='${NEW_CONFIG_LOC}'" 'Missing or incomplete configuration info'
+  os::cmd::expect_failure_and_text "env -u KUBERNETES_SERVICE_HOST -u KUBECONFIG -u KUBERNETES_MASTER oc get buildconfig --config='${NEW_CONFIG_LOC}'" 'Missing or incomplete configuration info'
+  os::cmd::expect_failure_and_text "env -u KUBERNETES_SERVICE_HOST oc get buildconfig --config='${NEW_CONFIG_LOC}'" 'Missing or incomplete configuration info'
 )
 echo "config error handling: ok"
 os::test::junit::declare_suite_end
