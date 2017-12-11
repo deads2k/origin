@@ -88,7 +88,8 @@ func (r *ScaleREST) New() runtime.Object {
 
 func (r *ScaleREST) GroupVersionKind(containingGV schema.GroupVersion) schema.GroupVersionKind {
 	switch containingGV {
-	case deployapiv1.SchemeGroupVersion:
+	case deployapiv1.SchemeGroupVersion,
+		deployapiv1.LegacySchemeGroupVersion:
 		return extensionsv1beta1.SchemeGroupVersion.WithKind("Scale")
 	default:
 		return autoscalingv1.SchemeGroupVersion.WithKind("Scale")
