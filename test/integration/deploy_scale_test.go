@@ -66,8 +66,13 @@ func TestDeployScale(t *testing.T) {
 		if legacyScale.GetAPIVersion() != "extensions/v1beta1" {
 			t.Fatalf("Expected extensions/v1beta1, got %v", legacyScale.GetAPIVersion())
 		}
+		scaleBytes, err := legacyScale.MarshalJSON()
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		// Ensure we can submit the same type back
-		if err := adminAppsClient.RESTClient().Put().AbsPath(legacyPath).Body(legacyScale).Do().Error(); err != nil {
+		if err := adminAppsClient.RESTClient().Put().AbsPath(legacyPath).Body(scaleBytes).Do().Error(); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -83,8 +88,13 @@ func TestDeployScale(t *testing.T) {
 		if scale.GetAPIVersion() != "extensions/v1beta1" {
 			t.Fatalf("Expected extensions/v1beta1, got %v", scale.GetAPIVersion())
 		}
+		scaleBytes, err := scale.MarshalJSON()
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		// Ensure we can submit the same type back
-		if err := adminAppsClient.RESTClient().Put().AbsPath(scalePath).Body(scale).Do().Error(); err != nil {
+		if err := adminAppsClient.RESTClient().Put().AbsPath(scalePath).Body(scaleBytes).Do().Error(); err != nil {
 			t.Fatal(err)
 		}
 	}
