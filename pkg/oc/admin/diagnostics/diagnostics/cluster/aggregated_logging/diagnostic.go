@@ -32,6 +32,7 @@ import (
 // https://github.com/openshift/origin-aggregated-logging
 type AggregatedLogging struct {
 	masterConfig      *configapi.MasterConfig
+	loggingURL        string
 	MasterConfigFile  string
 	OAuthClientClient oauthtypedclient.OAuthClientsGetter
 	ProjectClient     projecttypedclient.ProjectsGetter
@@ -68,7 +69,9 @@ func NewAggregatedLogging(
 	sccClient securitytypedclient.SecurityContextConstraintsGetter,
 ) *AggregatedLogging {
 	return &AggregatedLogging{
-		masterConfig:      nil,
+		masterConfig: nil,
+		// TODO this needs to be plumbed because the master-config no longer has it.
+		loggingURL:        "",
 		MasterConfigFile:  masterConfigFile,
 		OAuthClientClient: oauthClientClient,
 		ProjectClient:     projectClient,
@@ -159,14 +162,15 @@ func (d *AggregatedLogging) CanRun() (bool, error) {
 	if err != nil {
 		return false, errors.New("Master configuration is unreadable")
 	}
-	if d.masterConfig.AssetConfig.LoggingPublicURL == "" {
-		return false, errors.New("No LoggingPublicURL is defined in the master configuration")
-	}
 	return true, nil
 }
 
 func (d *AggregatedLogging) Check() types.DiagnosticResult {
-	project := retrieveLoggingProject(d.result, d.masterConfig, d.ProjectClient, d.RouteClient)
+	if len(d.loggingURL) == 0 {
+		return d.result
+	}
+
+	project := retrieveLoggingProject(d.result, d.loggingURL, d.ProjectClient, d.RouteClient)
 	if len(project) != 0 {
 		checkServiceAccounts(d, d, project)
 		checkClusterRoleBindings(d, d, project)
@@ -193,17 +197,17 @@ and updating the annotation:
 
 `
 
-func retrieveLoggingProject(r types.DiagnosticResult, masterCfg *configapi.MasterConfig, projectClient projecttypedclient.ProjectsGetter, routeClient routetypedclient.RoutesGetter) string {
-	r.Debug("AGL0010", fmt.Sprintf("masterConfig.AssetConfig.LoggingPublicURL: '%s'", masterCfg.AssetConfig.LoggingPublicURL))
+func retrieveLoggingProject(r types.DiagnosticResult, loggingURL string, projectClient projecttypedclient.ProjectsGetter, routeClient routetypedclient.RoutesGetter) string {
+	r.Debug("AGL0010", fmt.Sprintf("masterConfig.AssetConfig.LoggingPublicURL: '%s'", loggingURL))
 	projectName := ""
-	if len(masterCfg.AssetConfig.LoggingPublicURL) == 0 {
+	if len(loggingURL) == 0 {
 		r.Debug("AGL0017", "masterConfig.AssetConfig.LoggingPublicURL is empty")
 		return projectName
 	}
 
-	loggingUrl, err := url.Parse(masterCfg.AssetConfig.LoggingPublicURL)
+	loggingUrl, err := url.Parse(loggingURL)
 	if err != nil {
-		r.Error("AGL0011", err, fmt.Sprintf("Unable to parse the loggingPublicURL from the masterConfig '%s'", masterCfg.AssetConfig.LoggingPublicURL))
+		r.Error("AGL0011", err, fmt.Sprintf("Unable to parse the loggingPublicURL from the masterConfig '%s'", loggingURL))
 		return projectName
 	}
 
