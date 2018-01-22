@@ -25,8 +25,9 @@ import (
 
 // lazyObject defers loading the mapper and typer until necessary.
 type lazyObject struct {
-	loader func() (RESTMapper, runtime.ObjectTyper, error)
+	loader func(bool) (RESTMapper, runtime.ObjectTyper, error)
 
+	local  bool
 	lock   sync.Mutex
 	loaded bool
 	err    error
@@ -37,7 +38,7 @@ type lazyObject struct {
 // NewLazyObjectLoader handles unrecoverable errors when creating a RESTMapper / ObjectTyper by
 // returning those initialization errors when the interface methods are invoked. This defers the
 // initialization and any server calls until a client actually needs to perform the action.
-func NewLazyObjectLoader(fn func() (RESTMapper, runtime.ObjectTyper, error)) (RESTMapper, runtime.ObjectTyper) {
+func NewLazyObjectLoader(fn func(bool) (RESTMapper, runtime.ObjectTyper, error)) (RESTMapper, runtime.ObjectTyper) {
 	obj := &lazyObject{loader: fn}
 	return obj, obj
 }
@@ -49,13 +50,17 @@ func (o *lazyObject) init() error {
 	if o.loaded {
 		return o.err
 	}
-	o.mapper, o.typer, o.err = o.loader()
+	o.mapper, o.typer, o.err = o.loader(o.local)
 	o.loaded = true
 	return o.err
 }
 
 var _ RESTMapper = &lazyObject{}
 var _ runtime.ObjectTyper = &lazyObject{}
+
+func (o *lazyObject) SetLocal(local bool) {
+	o.local = local
+}
 
 func (o *lazyObject) KindFor(resource schema.GroupVersionResource) (schema.GroupVersionKind, error) {
 	if err := o.init(); err != nil {

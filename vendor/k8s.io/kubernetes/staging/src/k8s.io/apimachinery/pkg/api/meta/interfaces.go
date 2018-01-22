@@ -147,3 +147,10 @@ type RESTMapper interface {
 
 	ResourceSingularizer(resource string) (singular string, err error)
 }
+
+// MaybeLocalRESTMapper allows consumers to toggle a local flag on the RESTMapper
+type MaybeLocalRESTMapper interface {
+	RESTMapper
+
+	SetLocal(bool)
+}

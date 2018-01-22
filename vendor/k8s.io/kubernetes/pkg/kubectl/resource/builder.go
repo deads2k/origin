@@ -220,6 +220,11 @@ func (b *Builder) Local() *Builder {
 	mapper := *b.mapper
 	mapper.ClientMapper = DisabledClientForMapping{ClientMapper: mapper.ClientMapper}
 	b.mapper = &mapper
+
+	if localMapper, ok := mapper.RESTMapper.(meta.MaybeLocalRESTMapper); ok {
+		localMapper.SetLocal(true)
+	}
+
 	return b
 }
 

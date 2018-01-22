@@ -78,7 +78,11 @@ func NewObjectMappingFactory(clientAccessFactory ClientAccessFactory) ObjectMapp
 // the underlying Scheme supports Unstructured. The mapper will return converters that can
 // convert versioned types to unstructured and back.
 // It can return an error and the best effort unstructured mapper and typer.
-func (f *ring1Factory) objectLoader() (meta.RESTMapper, runtime.ObjectTyper, error) {
+func (f *ring1Factory) objectLoader(local bool) (meta.RESTMapper, runtime.ObjectTyper, error) {
+	if local {
+		return legacyscheme.Registry.RESTMapper(), legacyscheme.Scheme, nil
+	}
+
 	discoveryClient, err := f.clientAccessFactory.DiscoveryClient()
 	if err != nil {
 		unstructuredMapper := discovery.NewRESTMapper(nil, meta.InterfacesForUnstructured)
