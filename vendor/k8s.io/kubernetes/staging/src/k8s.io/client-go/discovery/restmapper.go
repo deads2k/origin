@@ -177,10 +177,11 @@ type DeferredDiscoveryRESTMapper struct {
 // NewDeferredDiscoveryRESTMapper returns a
 // DeferredDiscoveryRESTMapper that will lazily query the provided
 // client for discovery information to do REST mappings.
-func NewDeferredDiscoveryRESTMapper(cl CachedDiscoveryInterface, versionInterface meta.VersionInterfacesFunc) *DeferredDiscoveryRESTMapper {
+func NewDeferredDiscoveryRESTMapper(cl CachedDiscoveryInterface, versionInterface meta.VersionInterfacesFunc, delegate meta.RESTMapper) *DeferredDiscoveryRESTMapper {
 	return &DeferredDiscoveryRESTMapper{
 		cl:               cl,
 		versionInterface: versionInterface,
+		delegate:         delegate,
 	}
 }
 

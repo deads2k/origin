@@ -75,7 +75,7 @@ func startHPAControllerWithMetricsClient(ctx ControllerContext, metricsClient me
 	// TODO: we need something like deferred discovery REST mapper that calls invalidate
 	// on cache misses.
 	cachedDiscovery := discocache.NewMemCacheClient(hpaClientGoClient.Discovery())
-	restMapper := discovery.NewDeferredDiscoveryRESTMapper(cachedDiscovery, apimeta.InterfacesForUnstructured)
+	restMapper := discovery.NewDeferredDiscoveryRESTMapper(cachedDiscovery, apimeta.InterfacesForUnstructured, nil)
 	restMapper.Reset()
 	// we don't use cached discovery because DiscoveryScaleKindResolver does its own caching,
 	// so we want to re-fetch every time when we actually ask for it

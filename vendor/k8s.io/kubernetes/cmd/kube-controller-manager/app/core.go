@@ -336,7 +336,7 @@ func startGarbageCollectorController(ctx ControllerContext) (bool, error) {
 
 	// Use a discovery client capable of being refreshed.
 	discoveryClient := cacheddiscovery.NewMemCacheClient(gcClientset.Discovery())
-	restMapper := discovery.NewDeferredDiscoveryRESTMapper(discoveryClient, meta.InterfacesForUnstructured)
+	restMapper := discovery.NewDeferredDiscoveryRESTMapper(discoveryClient, meta.InterfacesForUnstructured, nil)
 	restMapper.Reset()
 
 	config := ctx.ClientBuilder.ConfigOrDie("generic-garbage-collector")
