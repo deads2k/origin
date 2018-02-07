@@ -6,12 +6,10 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/golang/glog"
@@ -21,7 +19,6 @@ import (
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/wait"
 	utilwait "k8s.io/apimachinery/pkg/util/wait"
 	clientgoclientset "k8s.io/client-go/kubernetes"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -598,40 +595,6 @@ func testEtcdConnectivity(etcdClientInfo configapi.EtcdConnectionInfo) error {
 // allocation controller is passed in because it wants direct etcd access.  Naughty.
 func startControllers(options configapi.MasterConfig, allocationController origin.SecurityAllocationController, controllerContext origincontrollers.ControllerContext) error {
 	openshiftControllerConfig, err := origincontrollers.BuildOpenshiftControllerConfig(options)
-	if err != nil {
-		return err
-	}
-
-	// We need to start the serviceaccount-tokens controller first as it provides token
-	// generation for other controllers.
-	startSATokenController := openshiftControllerConfig.ServiceAccountContentControllerInit()
-	if enabled, err := startSATokenController(controllerContext); err != nil {
-		return fmt.Errorf("Error starting serviceaccount-token controller: %v", err)
-	} else if !enabled {
-		glog.Warningf("Skipping serviceaccount-token controller")
-	} else {
-		glog.Infof("Started serviceaccount-token controller")
-	}
-
-	// The service account controllers require informers in order to create service account tokens
-	// for other controllers, which means we need to start their informers (which use the privileged
-	// loopback client) before the other controllers will run.
-	controllerContext.ExternalKubeInformers.Start(controllerContext.Stop)
-
-	// right now we have controllers which are relying on the ability to make requests before the bootstrap policy is in place
-	// In 3.7, we will be fixed by the post start hook that prevents readiness unless policy is in place
-	// for 3.6, just make sure we don't proceed until the garbage collector can hit discovery
-	// wait for bootstrap permissions to be established.  This check isn't perfect, but it ensures that at least the controllers checking discovery can succeed
-	gcClientset := controllerContext.ClientBuilder.ClientOrDie("generic-garbage-collector")
-	err = wait.PollImmediate(500*time.Millisecond, 30*time.Second, func() (bool, error) {
-		result := gcClientset.Discovery().RESTClient().Get().AbsPath("/apis").Do()
-		var statusCode int
-		result.StatusCode(&statusCode)
-		if statusCode >= http.StatusOK && statusCode < http.StatusMultipleChoices {
-			return true, nil
-		}
-		return false, nil
-	})
 	if err != nil {
 		return err
 	}
