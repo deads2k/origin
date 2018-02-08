@@ -65,6 +65,7 @@ var (
 	// TODO it's not perfect, but its fairly good as a starting point.
 	componentsToInstall = []componentRequest{
 		{location: "openshift-controller-manager", privilegedSANames: []string{"openshift-controller-manager"}},
+		{location: "kube-proxy", privilegedSANames: []string{"kube-proxy"}},
 	}
 )
 
@@ -132,6 +133,7 @@ func (c *ClientStartConfig) StartSelfHosted(out io.Writer) error {
 
 	templateSubstitutionValues := map[string]string{
 		"MASTER_CONFIG_HOST_PATH": masterConfigDir,
+		"NODE_CONFIG_HOST_PATH":   nodeConfigDir,
 	}
 
 	waitGroup := sync.WaitGroup{}
