@@ -259,11 +259,13 @@ func (opts *RegistryOptions) Complete(f *clientcmd.Factory, cmd *cobra.Command, 
 		return fmt.Errorf("error getting namespace: %v", nsErr)
 	}
 
-	kClient, kClientErr := f.ClientSet()
-	if kClientErr != nil {
-		return fmt.Errorf("error getting client: %v", kClientErr)
+	if !opts.Config.Action.DryRun {
+		kClient, kClientErr := f.ClientSet()
+		if kClientErr != nil {
+			return fmt.Errorf("error getting client: %v", kClientErr)
+		}
+		opts.serviceClient = kClient.Core()
 	}
-	opts.serviceClient = kClient.Core()
 
 	opts.Config.Action.Bulk.Mapper = clientcmd.ResourceMapper(f)
 	opts.Config.Action.Out, opts.Config.Action.ErrOut = out, errout
@@ -283,19 +285,26 @@ func (opts *RegistryOptions) RunCmdRegistry() error {
 
 	output := opts.Config.Action.ShouldPrint()
 	generate := output
-	service, err := opts.serviceClient.Services(opts.namespace).Get(name, metav1.GetOptions{})
-	if err != nil {
-		if !generate {
-			if !errors.IsNotFound(err) {
-				return fmt.Errorf("can't check for existing docker-registry %q: %v", name, err)
+
+	switch {
+	case !generate && opts.serviceClient == nil:
+		return fmt.Errorf("can't check for existing docker-registry %q: %v", name, "serviceClient is missing")
+	case generate && opts.serviceClient == nil:
+	default:
+		service, err := opts.serviceClient.Services(opts.namespace).Get(name, metav1.GetOptions{})
+		if err != nil {
+			if !generate {
+				if !errors.IsNotFound(err) {
+					return fmt.Errorf("can't check for existing docker-registry %q: %v", name, err)
+				}
+				if opts.Config.Action.DryRun {
+					return fmt.Errorf("Docker registry %q service does not exist", name)
+				}
+				generate = true
 			}
-			if opts.Config.Action.DryRun {
-				return fmt.Errorf("Docker registry %q service does not exist", name)
-			}
-			generate = true
+		} else {
+			clusterIP = service.Spec.ClusterIP
 		}
-	} else {
-		clusterIP = service.Spec.ClusterIP
 	}
 
 	if !generate {

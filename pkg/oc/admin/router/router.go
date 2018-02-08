@@ -573,11 +573,6 @@ func RunCmdRouter(f *clientcmd.Factory, cmd *cobra.Command, out, errout io.Write
 	if err != nil {
 		return fmt.Errorf("error getting client: %v", err)
 	}
-	kClient, err := f.ClientSet()
-	if err != nil {
-		return fmt.Errorf("error getting client: %v", err)
-	}
-
 	cfg.Action.Bulk.Mapper = clientcmd.ResourceMapper(f)
 	cfg.Action.Out, cfg.Action.ErrOut = out, errout
 	cfg.Action.Bulk.Op = configcmd.Create
@@ -586,19 +581,29 @@ func RunCmdRouter(f *clientcmd.Factory, cmd *cobra.Command, out, errout io.Write
 
 	output := cfg.Action.ShouldPrint()
 	generate := output
-	service, err := kClient.Core().Services(namespace).Get(name, metav1.GetOptions{})
-	if err != nil {
-		if !generate {
-			if !errors.IsNotFound(err) {
-				return fmt.Errorf("can't check for existing router %q: %v", name, err)
-			}
-			if !output && cfg.Action.DryRun {
-				return fmt.Errorf("Router %q service does not exist", name)
-			}
-			generate = true
+
+	switch {
+	case generate && cfg.Action.DryRun:
+	default:
+		kClient, err := f.ClientSet()
+		if err != nil {
+			return fmt.Errorf("error getting client: %v", err)
 		}
-	} else {
-		clusterIP = service.Spec.ClusterIP
+
+		service, err := kClient.Core().Services(namespace).Get(name, metav1.GetOptions{})
+		if err != nil {
+			if !generate {
+				if !errors.IsNotFound(err) {
+					return fmt.Errorf("can't check for existing router %q: %v", name, err)
+				}
+				if !output && cfg.Action.DryRun {
+					return fmt.Errorf("Router %q service does not exist", name)
+				}
+				generate = true
+			}
+		} else {
+			clusterIP = service.Spec.ClusterIP
+		}
 	}
 
 	if !generate {
@@ -610,17 +615,19 @@ func RunCmdRouter(f *clientcmd.Factory, cmd *cobra.Command, out, errout io.Write
 		return fmt.Errorf("you must specify a service account for the router with --service-account")
 	}
 
-	securityClient, err := f.OpenshiftInternalSecurityClient()
-	if err != nil {
-		return err
-	}
-	if err := validateServiceAccount(securityClient, namespace, cfg.ServiceAccount, cfg.HostNetwork, cfg.HostPorts); err != nil {
-		err = fmt.Errorf("router could not be created; %v", err)
-		if !cfg.Action.ShouldPrint() {
+	if !(generate && cfg.Action.DryRun) {
+		securityClient, err := f.OpenshiftInternalSecurityClient()
+		if err != nil {
 			return err
 		}
-		fmt.Fprintf(errout, "error: %v\n", err)
-		defaultOutputErr = kcmdutil.ErrExit
+		if err := validateServiceAccount(securityClient, namespace, cfg.ServiceAccount, cfg.HostNetwork, cfg.HostPorts); err != nil {
+			err = fmt.Errorf("router could not be created; %v", err)
+			if !cfg.Action.ShouldPrint() {
+				return err
+			}
+			fmt.Fprintf(errout, "error: %v\n", err)
+			defaultOutputErr = kcmdutil.ErrExit
+		}
 	}
 
 	// create new router
