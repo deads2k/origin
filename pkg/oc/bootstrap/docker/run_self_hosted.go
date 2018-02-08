@@ -75,8 +75,6 @@ type componentRequest struct {
 }
 
 func (c *ClientStartConfig) StartSelfHosted(out io.Writer) error {
-	fmt.Fprintf(out, "Starting OpenShift using %s ...\n", c.openshiftImage())
-
 	if c.PortForwarding {
 		err := openshift.CheckSocat()
 		if err != nil {

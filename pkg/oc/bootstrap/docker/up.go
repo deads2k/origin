@@ -174,6 +174,7 @@ func NewCmdUp(name, fullName string, f *osclientcmd.Factory, out, errout io.Writ
 		Run: func(c *cobra.Command, args []string) {
 			kcmdutil.CheckErr(config.Complete(f, c, out))
 			kcmdutil.CheckErr(config.Validate(out, errout))
+			kcmdutil.CheckErr(config.CommonStartConfig.Check(out))
 			if err := config.Start(out); err != nil {
 				fmt.Fprintf(errout, "%s\n", err.Error())
 				os.Exit(1)
@@ -398,9 +399,6 @@ func (c *CommonStartConfig) Complete(f *osclientcmd.Factory, cmd *cobra.Command,
 		c.addTask(simpleTask("Checking Docker daemon configuration", c.CheckDockerInsecureRegistry))
 	}
 
-	// Ensure that ports used by OpenShift are available on the host machine
-	c.addTask(simpleTask("Checking for available ports", c.CheckAvailablePorts))
-
 	// Check whether the Docker host has the right binaries to use Kubernetes' nsenter mounter
 	// If not, use a shared volume to mount volumes on OpenShift
 	c.addTask(simpleTask("Checking type of volume mount", c.CheckNsenterMounter))
@@ -580,10 +578,13 @@ func getDetailedOut(out io.Writer) io.Writer {
 
 // Start runs the start tasks ensuring that they are executed in sequence
 func (c *ClientStartConfig) Start(out io.Writer) error {
-	if c.RunLikeRealEnvironments {
-		return c.StartSelfHosted(out)
-	}
 	fmt.Fprintf(out, "Starting OpenShift using %s ...\n", c.openshiftImage())
+
+	if c.RunLikeRealEnvironments {
+		if err := c.StartSelfHosted(out); err != nil {
+			return err
+		}
+	}
 
 	detailedOut := getDetailedOut(out)
 	taskPrinter := NewTaskPrinter(detailedOut)
