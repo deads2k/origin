@@ -57,15 +57,15 @@ objects:
           args:
           - "--enable=proxy"
           - "--listen=https://0.0.0.0:8444"
-          - "--config=/etc/origin/node/master-config.yaml"
+          - "--config=/etc/origin/node/node-config.yaml"
           securityContext:
             privileged: true
             runAsUser: 0
           volumeMounts:
            - mountPath: /etc/origin/node/
              name: node-config
-            readOnly: true
+             readOnly: true
         volumes:
-        - name: master-config
+        - name: node-config
           hostPath:
             path: ${NODE_CONFIG_HOST_PATH}

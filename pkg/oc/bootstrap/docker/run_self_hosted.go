@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	corev1 "k8s.io/api/core/v1"
+	kapierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -137,7 +138,8 @@ func (c *ClientStartConfig) StartSelfHosted(out io.Writer) error {
 	}
 
 	waitGroup := sync.WaitGroup{}
-	for _, component := range componentsToInstall {
+	for i := range componentsToInstall {
+		component := componentsToInstall[i]
 		glog.Infof("Installing %q...", component.location)
 		waitGroup.Add(1)
 
@@ -299,10 +301,10 @@ func waitForHealthyKubeAPIServer(clientConfig *rest.Config) error {
 func (c componentRequest) install(clientConfig *rest.Config, substitutionValues map[string]string) error {
 	kubeClient, err := kubernetes.NewForConfig(clientConfig)
 	if err != nil {
-		return nil
+		return err
 	}
-	if _, err := kubeClient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: c.location}}); err != nil {
-		return nil
+	if _, err := kubeClient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: c.location}}); err != nil && !kapierrors.IsAlreadyExists(err) {
+		return err
 	}
 
 	for _, saName := range c.privilegedSANames {
