@@ -250,6 +250,7 @@
 // install/etcd/etcd.yaml
 // install/kube-apiserver/apiserver.yaml
 // install/kube-controller-manager/kube-controller-manager.yaml
+// install/kube-proxy/install.yaml
 // install/kube-scheduler/kube-scheduler.yaml
 // install/openshift-controller-manager/install.yaml
 // install/origin-web-console/console-config.yaml
@@ -29288,6 +29289,94 @@ func installKubeControllerManagerKubeControllerManagerYaml() (*asset, error) {
 	return a, nil
 }
 
+var _installKubeProxyInstallYaml = []byte(`apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: kube-proxy
+parameters:
+- name: IMAGE
+  value: openshift/origin:latest
+- name: NAMESPACE
+  value: kube-proxy
+- name: LOGLEVEL
+  value: "0"
+- name: NODE_CONFIG_HOST_PATH
+- name: NODE_SELECTOR
+  value: "{}"
+objects:
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: kube-proxy
+    namespace: ${NAMESPACE}
+
+- kind: ClusterRoleBinding
+  apiVersion: rbac.authorization.k8s.io/v1beta1
+  metadata:
+    name: system:kube-proxy
+  subjects:
+    - kind: ServiceAccount
+      name: kube-proxy
+      namespace: ${NAMESPACE}
+  roleRef:
+    kind: ClusterRole
+    name: system:node-proxier
+    apiGroup: rbac.authorization.k8s.io
+
+- apiVersion: extensions/v1beta1
+  kind: DaemonSet
+  metadata:
+    labels:
+      k8s-app: kube-proxy
+    name: kube-proxy
+    namespace: ${NAMESPACE}
+  spec:
+    selector:
+      matchLabels:
+        k8s-app: kube-proxy
+    template:
+      metadata:
+        labels:
+          k8s-app: kube-proxy
+      spec:
+        serviceAccountName: kube-proxy
+        hostNetwork: true
+        containers:
+        - name: kube-proxy
+          image: ${IMAGE}
+          command: ["openshift", "start", "node"]
+          args:
+          - "--enable=proxy"
+          - "--listen=https://0.0.0.0:8444"
+          - "--config=/etc/origin/node/node-config.yaml"
+          securityContext:
+            privileged: true
+            runAsUser: 0
+          volumeMounts:
+           - mountPath: /etc/origin/node/
+             name: node-config
+             readOnly: true
+        volumes:
+        - name: node-config
+          hostPath:
+            path: ${NODE_CONFIG_HOST_PATH}
+`)
+
+func installKubeProxyInstallYamlBytes() ([]byte, error) {
+	return _installKubeProxyInstallYaml, nil
+}
+
+func installKubeProxyInstallYaml() (*asset, error) {
+	bytes, err := installKubeProxyInstallYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "install/kube-proxy/install.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 var _installKubeSchedulerKubeSchedulerYaml = []byte(`kind: Pod
 apiVersion: v1
 metadata:
@@ -30442,6 +30531,7 @@ var _bindata = map[string]func() (*asset, error){
 	"install/etcd/etcd.yaml": installEtcdEtcdYaml,
 	"install/kube-apiserver/apiserver.yaml": installKubeApiserverApiserverYaml,
 	"install/kube-controller-manager/kube-controller-manager.yaml": installKubeControllerManagerKubeControllerManagerYaml,
+	"install/kube-proxy/install.yaml": installKubeProxyInstallYaml,
 	"install/kube-scheduler/kube-scheduler.yaml": installKubeSchedulerKubeSchedulerYaml,
 	"install/openshift-controller-manager/install.yaml": installOpenshiftControllerManagerInstallYaml,
 	"install/origin-web-console/console-config.yaml": installOriginWebConsoleConsoleConfigYaml,
@@ -30567,6 +30657,9 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		}},
 		"kube-controller-manager": &bintree{nil, map[string]*bintree{
 			"kube-controller-manager.yaml": &bintree{installKubeControllerManagerKubeControllerManagerYaml, map[string]*bintree{}},
+		}},
+		"kube-proxy": &bintree{nil, map[string]*bintree{
+			"install.yaml": &bintree{installKubeProxyInstallYaml, map[string]*bintree{}},
 		}},
 		"kube-scheduler": &bintree{nil, map[string]*bintree{
 			"kube-scheduler.yaml": &bintree{installKubeSchedulerKubeSchedulerYaml, map[string]*bintree{}},
