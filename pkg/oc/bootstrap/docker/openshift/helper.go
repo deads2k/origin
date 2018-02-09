@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -577,7 +578,12 @@ func masterHTTPClient(localConfig string) (*http.Client, error) {
 // copyConfig copies the OpenShift configuration directory from the
 // server directory into a local temporary directory.
 func (h *Helper) copyConfig() (string, error) {
-	tempDir, err := ioutil.TempDir("", "openshift-config")
+	tmpDirFn := os.TempDir
+	// On OSX $TMPDIR does not return path that Docker for Mac allow for mounting.
+	if runtime.GOOS == "darwin" {
+		tmpDirFn = func() string { return "/tmp" }
+	}
+	tempDir, err := ioutil.TempDir(tmpDirFn(), "openshift-config")
 	if err != nil {
 		return "", err
 	}
