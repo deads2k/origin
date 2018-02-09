@@ -40,7 +40,6 @@ func Login(username, password, server, configDir string, f *clientcmd.Factory, c
 			serverFound = true
 		}
 	}
-	serverFound = true
 	if !serverFound {
 		// Create a server entry and admin context for
 		// local cluster
