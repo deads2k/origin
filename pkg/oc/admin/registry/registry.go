@@ -95,19 +95,20 @@ type RegistryOptions struct {
 type RegistryConfig struct {
 	Action configcmd.BulkAction
 
-	Name           string
-	Type           string
-	ImageTemplate  variable.ImageTemplate
-	Ports          string
-	Replicas       int32
-	Labels         string
-	Volume         string
-	HostMount      string
-	DryRun         bool
-	Selector       string
-	ServiceAccount string
-	DaemonSet      bool
-	EnforceQuota   bool
+	Name             string
+	Type             string
+	ImageTemplate    variable.ImageTemplate
+	Ports            string
+	Replicas         int32
+	Labels           string
+	Volume           string
+	HostMount        string
+	DryRun           bool
+	Selector         string
+	ServiceAccount   string
+	DaemonSet        bool
+	DeploymentConfig bool
+	EnforceQuota     bool
 
 	// SupplementalGroups is list of int64, however cobra does not have appropriate func
 	// for that type list.
@@ -147,14 +148,15 @@ const (
 // NewCmdRegistry implements the OpenShift cli registry command
 func NewCmdRegistry(f *clientcmd.Factory, parentName, name string, out, errout io.Writer) *cobra.Command {
 	cfg := &RegistryConfig{
-		ImageTemplate:  variable.NewDefaultImageTemplate(),
-		Name:           "registry",
-		Labels:         defaultLabel,
-		Ports:          strconv.Itoa(defaultPort),
-		Volume:         "/registry",
-		ServiceAccount: "registry",
-		Replicas:       1,
-		EnforceQuota:   false,
+		ImageTemplate:    variable.NewDefaultImageTemplate(),
+		Name:             "registry",
+		Labels:           defaultLabel,
+		Ports:            strconv.Itoa(defaultPort),
+		Volume:           "/registry",
+		ServiceAccount:   "registry",
+		Replicas:         1,
+		EnforceQuota:     false,
+		DeploymentConfig: true,
 	}
 
 	cmd := &cobra.Command{
@@ -193,9 +195,11 @@ func NewCmdRegistry(f *clientcmd.Factory, parentName, name string, out, errout i
 	cmd.Flags().BoolVar(&cfg.DaemonSet, "daemonset", cfg.DaemonSet, "If true, use a daemonset instead of a deployment config.")
 	cmd.Flags().BoolVar(&cfg.EnforceQuota, "enforce-quota", cfg.EnforceQuota, "If true, the registry will refuse to write blobs if they exceed quota limits")
 	cmd.Flags().BoolVar(&cfg.Local, "local", cfg.Local, "If true, do not contact the apiserver")
+	cmd.Flags().BoolVar(&cfg.DeploymentConfig, "deployment-config", cfg.DeploymentConfig, "If true, use a deployment config instead of a deployment.")
 
 	cfg.Action.BindForOutput(cmd.Flags())
 	cmd.Flags().String("output-version", "", "The preferred API versions of the output objects")
+	cmd.Flags().MarkDeprecated("deployment-config", "use deployment instead")
 
 	return cmd
 }
@@ -423,7 +427,8 @@ func (opts *RegistryOptions) RunCmdRegistry() error {
 		},
 	)
 
-	if opts.Config.DaemonSet {
+	switch {
+	case opts.Config.DaemonSet:
 		objects = append(objects, &extensions.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   name,
@@ -437,7 +442,7 @@ func (opts *RegistryOptions) RunCmdRegistry() error {
 				},
 			},
 		})
-	} else {
+	case opts.Config.DeploymentConfig:
 		objects = append(objects, &appsapi.DeploymentConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   name,
@@ -450,6 +455,21 @@ func (opts *RegistryOptions) RunCmdRegistry() error {
 					{Type: appsapi.DeploymentTriggerOnConfigChange},
 				},
 				Template: podTemplate,
+			},
+		})
+	default:
+		objects = append(objects, &extensions.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   name,
+				Labels: opts.label,
+			},
+			Spec: extensions.DeploymentSpec{
+				Replicas: opts.Config.Replicas,
+				Selector: &metav1.LabelSelector{MatchLabels: opts.label},
+				Template: kapi.PodTemplateSpec{
+					ObjectMeta: podTemplate.ObjectMeta,
+					Spec:       podTemplate.Spec,
+				},
 			},
 		})
 	}
