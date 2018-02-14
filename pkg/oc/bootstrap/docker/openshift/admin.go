@@ -63,6 +63,7 @@ func (h *Helper) InstallRegistry(kubeClient kclientset.Interface, f *clientcmd.F
 		"--dry-run",
 		"--output=json",
 		"--local",
+		"--deployment-config=false",
 		fmt.Sprintf("--images=%s", images),
 		fmt.Sprintf("--mount-host=%s", path.Join(pvDir, "registry"))).Output()
 
@@ -179,6 +180,7 @@ func (h *Helper) InstallRouter(imageRunHelper *run.Runner, ocImage string, kubeC
 		"--output=json",
 		"--local",
 		"--host-ports=true",
+		"--deployment-config=false",
 		fmt.Sprintf("--host-network=%v", !portForwarding),
 		fmt.Sprintf("--images=%s", images),
 		fmt.Sprintf("--default-cert=%s", routerCertPath),
