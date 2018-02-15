@@ -9,7 +9,12 @@ import (
 	"github.com/openshift/origin/pkg/oc/bootstrap/docker/dockerhelper"
 	"github.com/openshift/origin/pkg/oc/bootstrap/docker/run"
 	"github.com/openshift/origin/pkg/oc/errors"
-	"github.com/openshift/origin/pkg/oc/util/tmputil"
+	"github.com/openshift/origin/pkg/oc/util/dir"
+)
+
+const (
+	ComponentDirectoryName        = "oc-cluster-up-node"
+	ComponentKubeDNSDirectoryName = "oc-cluster-up-kubedns"
 )
 
 type NodeStartConfig struct {
@@ -19,6 +24,8 @@ type NodeStartConfig struct {
 	NodeImage string
 
 	Args []string
+
+	HostDir string
 }
 
 func NewNodeStartConfig() *NodeStartConfig {
@@ -28,10 +35,23 @@ func NewNodeStartConfig() *NodeStartConfig {
 
 }
 
+func (opt NodeStartConfig) MakeKubeDNSConfig(dockerClient dockerhelper.Interface, imageRunHelper *run.Runner, out io.Writer) (string, error) {
+	return opt.makeConfig(dockerClient, imageRunHelper, out, ComponentKubeDNSDirectoryName)
+}
+
+func (opt NodeStartConfig) MakeNodeConfig(dockerClient dockerhelper.Interface, imageRunHelper *run.Runner, out io.Writer) (string, error) {
+	return opt.makeConfig(dockerClient, imageRunHelper, out, ComponentDirectoryName)
+}
+
 // Start starts the OpenShift master as a Docker container
 // and returns a directory in the local file system where
 // the OpenShift configuration has been copied
-func (opt NodeStartConfig) MakeNodeConfig(dockerClient dockerhelper.Interface, imageRunHelper *run.Runner, out io.Writer) (string, error) {
+func (opt NodeStartConfig) makeConfig(dockerClient dockerhelper.Interface, imageRunHelper *run.Runner, out io.Writer, componentName string) (string, error) {
+	nodeConfigDir, err := dir.ConfigDir(opt.HostDir, componentName)
+	if err != nil {
+		return "", err
+	}
+
 	fmt.Fprintf(out, "Creating initial OpenShift node configuration\n")
 	createConfigCmd := []string{
 		"adm", "create-node-config",
@@ -50,17 +70,13 @@ func (opt NodeStartConfig) MakeNodeConfig(dockerClient dockerhelper.Interface, i
 		return "", errors.NewError("could not create OpenShift configuration: %v", err).WithCause(err)
 	}
 
-	tempDir, err := tmputil.TempDir("oc-cluster-up-node-")
-	if err != nil {
-		return "", err
-	}
-	glog.V(1).Infof("Copying OpenShift node config to local directory %s", tempDir)
-	if err = dockerhelper.DownloadDirFromContainer(dockerClient, containerId, "/var/lib/origin/openshift.local.config", tempDir); err != nil {
-		if removeErr := os.RemoveAll(tempDir); removeErr != nil {
-			glog.V(2).Infof("Error removing temporary config dir %s: %v", tempDir, removeErr)
+	glog.V(1).Infof("Copying OpenShift node config to local directory %s", nodeConfigDir)
+	if err = dockerhelper.DownloadDirFromContainer(dockerClient, containerId, "/var/lib/origin/openshift.local.config", nodeConfigDir); err != nil {
+		if removeErr := os.RemoveAll(nodeConfigDir); removeErr != nil {
+			glog.V(2).Infof("Error removing temporary config dir %s: %v", nodeConfigDir, removeErr)
 		}
 		return "", err
 	}
 
-	return tempDir, nil
+	return nodeConfigDir, nil
 }

@@ -15,7 +15,7 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/golang/glog"
-	"github.com/openshift/origin/pkg/oc/util/tmputil"
+	"github.com/openshift/origin/pkg/oc/util/dir"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/homedir"
 	kapi "k8s.io/kubernetes/pkg/apis/core"
@@ -395,7 +395,7 @@ func masterHTTPClient(localConfig string) (*http.Client, error) {
 // copyConfig copies the OpenShift configuration directory from the
 // server directory into a local temporary directory.
 func (h *Helper) copyConfig() (string, error) {
-	tempDir, err := tmputil.TempDir("openshift-config")
+	tempDir, err := dir.ConfigDir("", "openshift-config")
 	if err != nil {
 		return "", err
 	}

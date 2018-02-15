@@ -15,7 +15,7 @@ import (
 	dockerclient "github.com/docker/engine-api/client"
 	"github.com/docker/engine-api/types/versions"
 	"github.com/golang/glog"
-	"github.com/openshift/origin/pkg/oc/util/tmputil"
+	"github.com/openshift/origin/pkg/oc/util/dir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -230,6 +230,7 @@ type CommonStartConfig struct {
 	PodManifestDir           string
 	HostVolumesDir           string
 	HostConfigDir            string
+	WriteConfig              bool
 	HostDataDir              string
 	UsePorts                 []int
 	DNSPort                  int
@@ -279,6 +280,7 @@ func (config *CommonStartConfig) Bind(flags *pflag.FlagSet) {
 	flags.StringVar(&config.RoutingSuffix, "routing-suffix", "", "Default suffix for server routes")
 	flags.BoolVar(&config.UseExistingConfig, "use-existing-config", false, "Use existing configuration if present")
 	flags.StringVar(&config.HostConfigDir, "host-config-dir", host.DefaultConfigDir, "Directory on Docker host for OpenShift configuration")
+	flags.BoolVar(&config.WriteConfig, "write-config", false, "Write the configuration files into host config dir")
 	flags.StringVar(&config.HostVolumesDir, "host-volumes-dir", host.DefaultVolumesDir, "Directory on Docker host for OpenShift volumes")
 	flags.StringVar(&config.HostDataDir, "host-data-dir", "", "Directory on Docker host for OpenShift data. If not specified, etcd data will not be persisted on the host.")
 	flags.StringVar(&config.HostPersistentVolumesDir, "host-pv-dir", host.DefaultPersistentVolumesDir, "Directory on host for OpenShift persistent volumes")
@@ -331,8 +333,10 @@ func (c *CommonStartConfig) Complete(f *osclientcmd.Factory, cmd *cobra.Command,
 	}
 
 	if len(c.PodManifestDir) == 0 {
-		var err error
-		c.PodManifestDir, err = tmputil.TempDir("oc-cluster-up-pod-manifest-")
+		var (
+			err error
+		)
+		c.PodManifestDir, err = dir.ConfigDir(c.HostConfigDir, "oc-cluster-up-pod-manifest")
 		if err != nil {
 			return err
 		}

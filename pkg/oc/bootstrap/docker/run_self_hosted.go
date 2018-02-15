@@ -85,19 +85,29 @@ func (c *ClientStartConfig) StartSelfHosted(out io.Writer) error {
 			return err
 		}
 	}
-	// TODO allow specifying config. If you specify config for a thing that has prereq, you must also specify all of its prereqs
 
-	masterConfigDir, err := c.makeMasterConfig(out)
-	if err != nil {
-		return err
-	}
-	glog.V(1).Infof("master-config at %q\n", masterConfigDir)
+	var (
+		masterConfigDir  string
+		nodeConfigDir    string
+		kubeDNSConfigDir string
+		err              error
+	)
 
-	nodeConfigDir, kubeDNSConfigDir, err := c.makeNodeConfig(out, masterConfigDir)
-	if err != nil {
-		return err
+	if len(c.HostConfigDir) > 0 && !c.WriteConfig {
+		masterConfigDir = filepath.Join(c.HostConfigDir, kubeapiserver.ComponentDirectoryName, "master")
+		nodeConfigDir = filepath.Join(c.HostConfigDir, kubelet.ComponentDirectoryName)
+		kubeDNSConfigDir = filepath.Join(c.HostConfigDir, kubelet.ComponentKubeDNSDirectoryName)
+	} else {
+		masterConfigDir, err = c.makeMasterConfig(out)
+		if err != nil {
+			return err
+		}
+		nodeConfigDir, kubeDNSConfigDir, err = c.makeNodeConfig(out, masterConfigDir)
+		if err != nil {
+			return err
+		}
 	}
-	glog.V(1).Infof("node-config at %q\n", nodeConfigDir)
+	glog.V(1).Infof("master-config at %q, node-config at %q, kube-dns-config: %q", masterConfigDir, nodeConfigDir, kubeDNSConfigDir)
 
 	kubeletFlags, err := c.makeKubeletFlags(out, nodeConfigDir)
 	if err != nil {
@@ -184,6 +194,7 @@ func (c *ClientStartConfig) makeMasterConfig(out io.Writer) (string, error) {
 	container.ImageFormat = c.imageFormat()
 	container.DNSPort = c.DNSPort
 	container.PublicHost = publicHost
+	container.HostDir = c.HostConfigDir
 
 	masterConfigDir, err := container.MakeMasterConfig(c.GetDockerClient(out), imageRunningHelper.New(), out)
 	if err != nil {
@@ -201,6 +212,7 @@ func (c *ClientStartConfig) makeNodeConfig(out io.Writer, masterConfigDir string
 	container := kubelet.NewNodeStartConfig()
 	container.ContainerBinds = append(container.ContainerBinds, masterConfigDir+":/var/lib/origin/openshift.local.masterconfig:z")
 	container.NodeImage = c.openshiftImage()
+	container.HostDir = c.HostConfigDir
 	container.Args = []string{
 		fmt.Sprintf("--certificate-authority=%s", "/var/lib/origin/openshift.local.masterconfig/ca.crt"),
 		fmt.Sprintf("--dns-bind-address=0.0.0.0:%d", c.DNSPort),
@@ -219,7 +231,7 @@ func (c *ClientStartConfig) makeNodeConfig(out io.Writer, masterConfigDir string
 	if err != nil {
 		return "", "", fmt.Errorf("error creating node config: %v", err)
 	}
-	kubeDNSConfigDir, err := container.MakeNodeConfig(c.GetDockerClient(out), imageRunningHelper.New(), out)
+	kubeDNSConfigDir, err := container.MakeKubeDNSConfig(c.GetDockerClient(out), imageRunningHelper.New(), out)
 	if err != nil {
 		return "", "", fmt.Errorf("error creating node config: %v", err)
 	}
