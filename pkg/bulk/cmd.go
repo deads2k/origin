@@ -183,6 +183,10 @@ func (c Creator) Create(obj *unstructured.Unstructured, namespace string) (*unst
 	if err != nil {
 		return nil, err
 	}
+	if mapping.Scope.Name() == meta.RESTScopeNameRoot {
+		namespace = ""
+	}
+
 	return c.Client.Resource(mapping.Resource).Namespace(namespace).Create(obj)
 }
 
