@@ -15,7 +15,7 @@ import (
 
 // RunController starts the build sync loop for builds and buildConfig processing.
 func RunBuildController(ctx ControllerContext) (bool, error) {
-	groupVersion := schema.GroupVersion{Group: "", Version: "v1"}
+	groupVersion := schema.GroupVersion{Group: "build.openshift.io", Version: "v1"}
 	annotationCodec := legacyscheme.Codecs.LegacyCodec(groupVersion)
 
 	imageTemplate := variable.NewDefaultImageTemplate()
