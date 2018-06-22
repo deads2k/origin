@@ -33,8 +33,8 @@ import (
 type PrintFlags struct {
 	JSONYamlPrintFlags *genericclioptions.JSONYamlPrintFlags
 	NamePrintFlags     *genericclioptions.NamePrintFlags
-	TemplateFlags      *printers.KubeTemplatePrintFlags
 	CustomColumnsFlags *printers.CustomColumnsPrintFlags
+	TemplateFlags      *KubeTemplatePrintFlags
 	HumanReadableFlags *HumanPrintFlags
 
 	NoHeaders    *bool
@@ -121,15 +121,14 @@ func (f *PrintFlags) ToPrinter() (printers.ResourcePrinter, error) {
 		f.CustomColumnsFlags.TemplateArgument = *f.TemplateFlags.TemplateArgument
 	}
 
+	if p, err := f.TemplateFlags.ToPrinter(outputFormat); !genericclioptions.IsNoCompatiblePrinterError(err) {
+		return p, err
+	}
 	if p, err := f.JSONYamlPrintFlags.ToPrinter(outputFormat); !genericclioptions.IsNoCompatiblePrinterError(err) {
 		return p, err
 	}
 
 	if p, err := f.HumanReadableFlags.ToPrinter(outputFormat); !genericclioptions.IsNoCompatiblePrinterError(err) {
-		return p, err
-	}
-
-	if p, err := f.TemplateFlags.ToPrinter(outputFormat); !genericclioptions.IsNoCompatiblePrinterError(err) {
 		return p, err
 	}
 
@@ -177,7 +176,7 @@ func NewGetPrintFlags() *PrintFlags {
 
 		JSONYamlPrintFlags: genericclioptions.NewJSONYamlPrintFlags(),
 		NamePrintFlags:     genericclioptions.NewNamePrintFlags(""),
-		TemplateFlags:      printers.NewKubeTemplatePrintFlags(),
+		TemplateFlags:      NewKubeTemplatePrintFlags(),
 
 		HumanReadableFlags: NewHumanPrintFlags(),
 		CustomColumnsFlags: printers.NewCustomColumnsPrintFlags(),
