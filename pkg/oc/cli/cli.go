@@ -162,6 +162,7 @@ func NewCommandCLI(name, fullName string, in io.Reader, out, errout io.Writer) *
 				cmd.NewCmdAttach(fullName, f, in, out, errout),
 				cmd.NewCmdRun(fullName, f, in, out, errout),
 				cmd.NewCmdCp(fullName, f, in, out, errout),
+				cmd.NewCmdWait(fullName, f, in, out, errout),
 			},
 		},
 		{

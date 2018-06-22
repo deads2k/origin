@@ -21,6 +21,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubectl/cmd/get"
 	"k8s.io/kubernetes/pkg/kubectl/cmd/templates"
 	kcmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
+	kwait "k8s.io/kubernetes/pkg/kubectl/cmd/wait"
 	"k8s.io/kubernetes/pkg/kubectl/util/i18n"
 
 	cmdutil "github.com/openshift/origin/pkg/cmd/util"
@@ -778,6 +779,10 @@ func NewCmdCp(fullName string, f kcmdutil.Factory, in io.Reader, out, errOut io.
 	cmd := kcmd.NewCmdCp(f, genericclioptions.IOStreams{Out: out, ErrOut: errOut})
 	cmd.Example = fmt.Sprintf(cpExample, fullName)
 	return cmd
+}
+
+func NewCmdWait(fullName string, f kcmdutil.Factory, in io.Reader, out, errOut io.Writer) *cobra.Command {
+	return kwait.NewCmdWait(f, genericclioptions.IOStreams{Out: out, ErrOut: errOut})
 }
 
 func NewCmdAuth(fullName string, f kcmdutil.Factory, out, errOut io.Writer) *cobra.Command {
