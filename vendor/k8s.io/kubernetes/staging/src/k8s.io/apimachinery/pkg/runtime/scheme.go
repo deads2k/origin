@@ -684,12 +684,21 @@ func (s *Scheme) PrioritizedVersionsForGroup(group string) []schema.GroupVersion
 // PrioritizedVersionsAllGroups returns all known versions in their priority order.  Groups are random, but
 // versions for a single group are prioritized
 func (s *Scheme) PrioritizedVersionsAllGroups() []schema.GroupVersion {
+	hasLegacyV1 := false
 	ret := []schema.GroupVersion{}
 	for group, versions := range s.versionPriority {
 		for _, version := range versions {
+			if len(group) == 0 && version == "v1" {
+				hasLegacyV1 = true
+				continue
+			}
 			ret = append(ret, schema.GroupVersion{Group: group, Version: version})
 		}
 	}
+	if hasLegacyV1 {
+		ret = append([]schema.GroupVersion{{Version: "v1"}}, ret...)
+	}
+
 	for _, observedVersion := range s.observedVersions {
 		found := false
 		for _, existing := range ret {
@@ -708,13 +717,22 @@ func (s *Scheme) PrioritizedVersionsAllGroups() []schema.GroupVersion {
 // PreferredVersionAllGroups returns the most preferred version for every group.
 // group ordering is random.
 func (s *Scheme) PreferredVersionAllGroups() []schema.GroupVersion {
+	hasLegacyV1 := false
 	ret := []schema.GroupVersion{}
 	for group, versions := range s.versionPriority {
 		for _, version := range versions {
+			if len(group) == 0 && version == "v1" {
+				hasLegacyV1 = true
+				continue
+			}
 			ret = append(ret, schema.GroupVersion{Group: group, Version: version})
 			break
 		}
 	}
+	if hasLegacyV1 {
+		ret = append([]schema.GroupVersion{{Version: "v1"}}, ret...)
+	}
+
 	for _, observedVersion := range s.observedVersions {
 		found := false
 		for _, existing := range ret {
