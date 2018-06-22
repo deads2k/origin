@@ -19,6 +19,7 @@ import (
 
 	buildapi "github.com/openshift/origin/pkg/build/apis/build"
 	"github.com/openshift/origin/pkg/oc/cli/util/clientcmd"
+	"github.com/openshift/origin/pkg/oc/util/ocscheme"
 )
 
 var (
@@ -124,7 +125,7 @@ var supportedBuildTypes = []string{"buildconfigs"}
 
 func (o *BuildSecretOptions) secretFromArg(f kcmdutil.Factory, mapper meta.RESTMapper, typer runtime.ObjectTyper, namespace, arg string) (string, error) {
 	builder := f.NewBuilder().
-		WithScheme(legacyscheme.Scheme, legacyscheme.Scheme.PrioritizedVersionsAllGroups()...).
+		WithScheme(ocscheme.ReadingInternalScheme).
 		LocalParam(o.Local).
 		NamespaceParam(namespace).DefaultNamespace().
 		RequireObject(false).
@@ -182,7 +183,7 @@ func (o *BuildSecretOptions) Complete(f kcmdutil.Factory, cmd *cobra.Command, ar
 		}
 	}
 	o.Builder = f.NewBuilder().
-		WithScheme(legacyscheme.Scheme, legacyscheme.Scheme.PrioritizedVersionsAllGroups()...).
+		WithScheme(ocscheme.ReadingInternalScheme).
 		LocalParam(o.Local).
 		ContinueOnError().
 		NamespaceParam(cmdNamespace).DefaultNamespace().

@@ -28,6 +28,7 @@ import (
 	cmdutil "github.com/openshift/origin/pkg/cmd/util"
 	"github.com/openshift/origin/pkg/oc/cli/describe"
 	"github.com/openshift/origin/pkg/oc/generate/app"
+	"github.com/openshift/origin/pkg/oc/util/ocscheme"
 	templateapi "github.com/openshift/origin/pkg/template/apis/template"
 	templatevalidation "github.com/openshift/origin/pkg/template/apis/template/validation"
 	templateinternalclient "github.com/openshift/origin/pkg/template/client/internalversion"
@@ -220,7 +221,7 @@ func RunProcess(f kcmdutil.Factory, in io.Reader, out, errout io.Writer, cmd *co
 		infos = append(infos, &resource.Info{Object: templateObj})
 	} else {
 		infos, err = f.NewBuilder().
-			WithScheme(legacyscheme.Scheme, legacyscheme.Scheme.PrioritizedVersionsAllGroups()...).
+			WithScheme(ocscheme.ReadingInternalScheme).
 			LocalParam(local).
 			FilenameParam(explicit, &resource.FilenameOptions{Recursive: false, Filenames: []string{filename}}).
 			Do().

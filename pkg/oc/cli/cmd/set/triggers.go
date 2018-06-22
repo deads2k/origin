@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	kapps "k8s.io/kubernetes/pkg/apis/apps"
 	kbatch "k8s.io/kubernetes/pkg/apis/batch"
 	kapi "k8s.io/kubernetes/pkg/apis/core"
@@ -33,6 +32,7 @@ import (
 	"github.com/openshift/origin/pkg/image/trigger/annotations"
 	"github.com/openshift/origin/pkg/oc/cli/util/clientcmd"
 	"github.com/openshift/origin/pkg/oc/generate/app"
+	"github.com/openshift/origin/pkg/oc/util/ocscheme"
 )
 
 var (
@@ -225,7 +225,7 @@ func (o *TriggersOptions) Complete(f kcmdutil.Factory, cmd *cobra.Command, args 
 		return err
 	}
 	o.Builder = f.NewBuilder().
-		WithScheme(legacyscheme.Scheme, legacyscheme.Scheme.PrioritizedVersionsAllGroups()...).
+		WithScheme(ocscheme.ReadingInternalScheme).
 		LocalParam(o.Local).
 		ContinueOnError().
 		NamespaceParam(cmdNamespace).DefaultNamespace().

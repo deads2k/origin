@@ -89,7 +89,7 @@ func (o SecretOptions) Validate() error {
 // GetServiceAccount Retrieve the service account object specified by the command
 func (o SecretOptions) GetServiceAccount() (*kapi.ServiceAccount, error) {
 	r := o.BuilderFunc().
-		WithScheme(legacyscheme.Scheme, legacyscheme.Scheme.PrioritizedVersionsAllGroups()...).
+		WithScheme(ocscheme.ReadingInternalScheme).
 		NamespaceParam(o.Namespace).
 		ResourceNames("serviceaccounts", o.TargetName).
 		SingleResourceType().
@@ -167,7 +167,7 @@ func (o SecretOptions) GetSecrets(allowNonExisting bool) ([]*kapi.Secret, bool, 
 
 	for _, secretName := range o.SecretNames {
 		r := o.BuilderFunc().
-			WithScheme(legacyscheme.Scheme, legacyscheme.Scheme.PrioritizedVersionsAllGroups()...).
+			WithScheme(ocscheme.ReadingInternalScheme).
 			NamespaceParam(o.Namespace).
 			ResourceNames("secrets", secretName).
 			SingleResourceType().

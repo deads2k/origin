@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	kapi "k8s.io/kubernetes/pkg/apis/core"
 	"k8s.io/kubernetes/pkg/kubectl/cmd/templates"
 	kcmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
@@ -23,6 +22,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubectl/polymorphichelpers"
 
 	"github.com/openshift/origin/pkg/oc/cli/util/clientcmd"
+	"github.com/openshift/origin/pkg/oc/util/ocscheme"
 )
 
 var (
@@ -188,7 +188,7 @@ func (o *ProbeOptions) Complete(f kcmdutil.Factory, cmd *cobra.Command, args []s
 		return err
 	}
 	o.Builder = f.NewBuilder().
-		WithScheme(legacyscheme.Scheme, legacyscheme.Scheme.PrioritizedVersionsAllGroups()...).
+		WithScheme(ocscheme.ReadingInternalScheme).
 		LocalParam(o.Local).
 		ContinueOnError().
 		NamespaceParam(cmdNamespace).DefaultNamespace().
