@@ -26,7 +26,7 @@ template='{{with .spec.output.to}}{{.kind}} {{.name}}{{end}}'
 
 # Build from Dockerfile with output to ImageStreamTag
 os::cmd::expect_success "oc new-build --dockerfile=\$'FROM centos:7\nRUN yum install -y httpd'"
-os::cmd::expect_success_and_text "oc get bc/centos --template '${template}'" '^ImageStreamTag centos:latest$'
+os::cmd::expect_success_and_text "oc get bc/centos --output=go-template='${template}'" '^ImageStreamTag centos:latest$'
 
 # Build from a binary with no inputs requires name
 os::cmd::expect_failure_and_text "oc new-build --binary" "you must provide a --name"
@@ -39,25 +39,25 @@ os::cmd::expect_success 'oc delete is/binary-test bc/binary-test'
 
 # Build from Dockerfile with output to DockerImage
 os::cmd::expect_success "oc new-build -D \$'FROM openshift/origin:v1.1' --to-docker"
-os::cmd::expect_success_and_text "oc get bc/origin --template '${template}'" '^DockerImage origin:latest$'
+os::cmd::expect_success_and_text "oc get bc/origin --output=go-template='${template}'" '^DockerImage origin:latest$'
 
 os::cmd::expect_success 'oc delete is/origin'
 
 # Build from Dockerfile with given output ImageStreamTag spec
 os::cmd::expect_success "oc new-build -D \$'FROM openshift/origin:v1.1\nENV ok=1' --to origin-test:v1.1"
-os::cmd::expect_success_and_text "oc get bc/origin-test --template '${template}'" '^ImageStreamTag origin-test:v1.1$'
+os::cmd::expect_success_and_text "oc get bc/origin-test --output=go-template='${template}'" '^ImageStreamTag origin-test:v1.1$'
 
 os::cmd::expect_success 'oc delete is/origin bc/origin'
 
 # Build from Dockerfile with given output DockerImage spec
 os::cmd::expect_success "oc new-build -D \$'FROM openshift/origin:v1.1\nENV ok=1' --to-docker --to openshift/origin:v1.1-test"
-os::cmd::expect_success_and_text "oc get bc/origin --template '${template}'" '^DockerImage openshift/origin:v1.1-test$'
+os::cmd::expect_success_and_text "oc get bc/origin --output=go-template='${template}'" '^DockerImage openshift/origin:v1.1-test$'
 
 os::cmd::expect_success 'oc delete is/origin'
 
 # Build from Dockerfile with custom name and given output ImageStreamTag spec
 os::cmd::expect_success "oc new-build -D \$'FROM openshift/origin:v1.1\nENV ok=1' --to origin-name-test --name origin-test2"
-os::cmd::expect_success_and_text "oc get bc/origin-test2 --template '${template}'" '^ImageStreamTag origin-name-test:latest$'
+os::cmd::expect_success_and_text "oc get bc/origin-test2 --output=go-template='${template}'" '^ImageStreamTag origin-name-test:latest$'
 
 os::cmd::try_until_text 'oc get is ruby-22-centos7' 'latest'
 os::cmd::expect_failure_and_text 'oc new-build ruby-22-centos7~https://github.com/openshift/ruby-ex ruby-22-centos7~https://github.com/openshift/ruby-ex --to invalid/argument' 'error: only one component with source can be used when specifying an output image reference'
@@ -80,9 +80,9 @@ os::cmd::expect_success 'oc get builds'
 os::cmd::try_until_text 'oc get is ruby-22-centos7' 'latest'
 
 os::test::junit::declare_suite_start "cmd/builds/patch-anon-fields"
-REAL_OUTPUT_TO=$(oc get bc/ruby-sample-build --template='{{ .spec.output.to.name }}')
+REAL_OUTPUT_TO=$(oc get bc/ruby-sample-build --output=go-template='{{ .spec.output.to.name }}')
 os::cmd::expect_success "oc patch bc/ruby-sample-build -p '{\"spec\":{\"output\":{\"to\":{\"name\":\"different:tag1\"}}}}'"
-os::cmd::expect_success_and_text "oc get bc/ruby-sample-build --template='{{ .spec.output.to.name }}'" 'different'
+os::cmd::expect_success_and_text "oc get bc/ruby-sample-build --output=go-template='{{ .spec.output.to.name }}'" 'different'
 os::cmd::expect_success "oc patch bc/ruby-sample-build -p '{\"spec\":{\"output\":{\"to\":{\"name\":\"${REAL_OUTPUT_TO}\"}}}}'"
 echo "patchAnonFields: ok"
 os::test::junit::declare_suite_end
@@ -181,8 +181,8 @@ os::cmd::expect_success "oc start-build bc/ruby-sample-build"
 os::cmd::expect_success "oc start-build bc/ruby-sample-build"
 lastbuild="$(basename $(oc start-build -o=name bc/ruby-sample-build))"
 os::cmd::expect_success_and_text 'oc cancel-build bc/ruby-sample-build', "\"${lastbuild}\" cancelled"
-os::cmd::expect_success_and_text "oc get build ${lastbuild} -o template --template '{{.status.phase}}'", 'Cancelled'
-builds=$(oc get builds -o template --template '{{range .items}}{{ .status.phase }} {{end}}')
+os::cmd::expect_success_and_text "oc get build ${lastbuild} -o template --output=go-template='{{.status.phase}}'", 'Cancelled'
+builds=$(oc get builds -o template --output=go-template='{{range .items}}{{ .status.phase }} {{end}}')
 for state in $builds; do
   os::cmd::expect_success "[ \"${state}\" == \"Cancelled\" ]"
 done
