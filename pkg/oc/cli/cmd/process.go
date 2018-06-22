@@ -333,7 +333,7 @@ func RunProcess(f kcmdutil.Factory, in io.Reader, out, errout io.Writer, cmd *co
 	}
 	// Prefer the Kubernetes core group for the List over the template.openshift.io
 	version.Group = kapi.GroupName
-	p = kprinters.NewVersionedPrinter(p, legacyscheme.Scheme, legacyscheme.Scheme, version)
+	p = kprinters.NewVersionedPrinter(p, ocscheme.PrintingInternalScheme, ocscheme.PrintingInternalScheme, version)
 
 	// use generic output
 	if kcmdutil.GetFlagBool(cmd, "raw") {
