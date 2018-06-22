@@ -11,17 +11,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kcmd "k8s.io/kubernetes/pkg/kubectl/cmd"
+	kcmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
+	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
 
 	appsapi "github.com/openshift/origin/pkg/apps/apis/apps"
 	buildapi "github.com/openshift/origin/pkg/build/apis/build"
 	buildfake "github.com/openshift/origin/pkg/build/generated/internalclientset/fake"
-	"github.com/openshift/origin/pkg/oc/cli/util/clientcmd"
 )
 
 // TestLogsFlagParity makes sure that our copied flags don't slip during rebases
 func TestLogsFlagParity(t *testing.T) {
-	kubeCmd := kcmd.NewCmdLogs(nil, ioutil.Discard, ioutil.Discard)
-	f := clientcmd.NewFactory(nil)
+	kubeCmd := kcmd.NewCmdLogs(nil, genericclioptions.NewTestIOStreamsDiscard())
+	f := kcmdutil.NewFactory(genericclioptions.NewTestConfigFlags())
 	originCmd := NewCmdLogs("oc", "logs", f, ioutil.Discard, ioutil.Discard)
 
 	kubeCmd.LocalFlags().VisitAll(func(kubeFlag *pflag.Flag) {
@@ -88,12 +89,14 @@ func TestRunLogForPipelineStrategy(t *testing.T) {
 		},
 	}
 
+	streams := genericclioptions.IOStreams{Out: &fakewriter, ErrOut: ioutil.Discard}
+
 	for _, tc := range testCases {
 		opts := OpenShiftLogsOptions{
 			KubeLogOptions: &kcmd.LogsOptions{
 				Object:    tc.o,
 				Namespace: "foo",
-				Out:       &fakewriter,
+				IOStreams: streams,
 			},
 			Client: fakebc.Build(),
 		}

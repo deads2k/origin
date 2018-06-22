@@ -20,7 +20,7 @@ import (
 	restfake "k8s.io/client-go/rest/fake"
 	kclientcmd "k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	"k8s.io/kubernetes/pkg/api/legacyscheme"
+	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
 
 	buildapi "github.com/openshift/origin/pkg/build/apis/build"
 	buildclient "github.com/openshift/origin/pkg/build/client/internalversion"
@@ -62,13 +62,19 @@ func TestStartBuildWebHook(t *testing.T) {
 	}))
 	defer server.Close()
 
+	configFlags := genericclioptions.NewTestConfigFlags()
+	restMapper, err := configFlags.ToRESTMapper()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
 	cfg := &FakeClientConfig{}
 	buf := &bytes.Buffer{}
 	o := &StartBuildOptions{
 		Out:          buf,
 		ClientConfig: cfg.Client,
 		FromWebhook:  server.URL + "/webhook",
-		Mapper:       legacyscheme.Registry.RESTMapper(),
+		Mapper:       restMapper,
 	}
 	if err := o.Run(); err != nil {
 		t.Fatalf("unable to start hook: %v", err)
@@ -104,6 +110,12 @@ func TestStartBuildHookPostReceive(t *testing.T) {
 2548 2548 refs/heads/stage`)
 	f.Close()
 
+	configFlags := genericclioptions.NewTestConfigFlags()
+	restMapper, err := configFlags.ToRESTMapper()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
 	testErr := errors.New("not enabled")
 	cfg := &FakeClientConfig{
 		Err: testErr,
@@ -114,7 +126,7 @@ func TestStartBuildHookPostReceive(t *testing.T) {
 		ClientConfig:   cfg.Client,
 		FromWebhook:    server.URL + "/webhook",
 		GitPostReceive: f.Name(),
-		Mapper:         legacyscheme.Registry.RESTMapper(),
+		Mapper:         restMapper,
 	}
 	if err := o.Run(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
