@@ -4,7 +4,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
+	"k8s.io/kubernetes/pkg/apis/apps"
+	"k8s.io/kubernetes/pkg/apis/batch"
 	kapi "k8s.io/kubernetes/pkg/apis/core"
+	"k8s.io/kubernetes/pkg/apis/extensions"
 	"k8s.io/kubernetes/pkg/kubectl/polymorphichelpers"
 
 	appsapiv1 "github.com/openshift/api/apps/v1"
@@ -32,6 +35,25 @@ func NewUpdatePodSpecForObjectFn(delegate polymorphichelpers.UpdatePodSpecForObj
 				t.Spec.Template = template
 			}
 			return true, fn(&template.Spec)
+
+		// FIXME-REBASE: we should probably get rid of these:
+		// k8s internals
+		case *kapi.Pod:
+			return true, convertExteralPodSpecToInternal(fn)(&t.Spec)
+		case *kapi.ReplicationController:
+			return true, convertExteralPodSpecToInternal(fn)(&t.Spec.Template.Spec)
+		case *extensions.Deployment:
+			return true, convertExteralPodSpecToInternal(fn)(&t.Spec.Template.Spec)
+		case *extensions.DaemonSet:
+			return true, convertExteralPodSpecToInternal(fn)(&t.Spec.Template.Spec)
+		case *extensions.ReplicaSet:
+			return true, convertExteralPodSpecToInternal(fn)(&t.Spec.Template.Spec)
+		case *apps.StatefulSet:
+			return true, convertExteralPodSpecToInternal(fn)(&t.Spec.Template.Spec)
+		case *batch.Job:
+			return true, convertExteralPodSpecToInternal(fn)(&t.Spec.Template.Spec)
+		case *batch.CronJob:
+			return true, convertExteralPodSpecToInternal(fn)(&t.Spec.JobTemplate.Spec.Template.Spec)
 
 		default:
 			return delegate(obj, fn)
