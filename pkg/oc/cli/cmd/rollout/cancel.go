@@ -24,6 +24,8 @@ import (
 	kapi "k8s.io/kubernetes/pkg/apis/core"
 	kclientset "k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset"
 	kcmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
+
+	"github.com/openshift/origin/pkg/oc/util/ocscheme"
 )
 
 type CancelOptions struct {

@@ -23,6 +23,8 @@ import (
 	kclientset "k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset"
 	"k8s.io/kubernetes/pkg/kubectl/cmd/templates"
 	kcmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
+
+	"github.com/openshift/origin/pkg/oc/util/ocscheme"
 )
 
 type RetryOptions struct {
