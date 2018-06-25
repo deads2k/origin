@@ -222,7 +222,7 @@ func (o *DiagnosticsOptions) bindCommonFlags(flags *flag.FlagSet) {
 
 // bind flags that are necessary for setting up an API client
 func (o *DiagnosticsOptions) bindClientFlags(flags *flag.FlagSet) {
-	o.ClientFlags = flag.NewFlagSet("client", flag.ContinueOnError) // hide the extensive set of client flags
+	o.ClientFlags = flags
 	flags.StringVar(&o.ClientClusterContext, options.FlagClusterContextName, "", "Client context to use for cluster administrator")
 	flags.BoolVar(&o.PreventModification, options.FlagPreventModificationName, false, "If true, may be set to prevent diagnostics making any changes via the API")
 }
