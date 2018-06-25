@@ -6,18 +6,19 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
-	kapi "k8s.io/kubernetes/pkg/apis/core"
 	"k8s.io/kubernetes/pkg/kubectl/cmd/templates"
 	kcmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 	"k8s.io/kubernetes/pkg/kubectl/genericclioptions/resource"
 
-	buildapi "github.com/openshift/origin/pkg/build/apis/build"
+	buildv1 "github.com/openshift/api/build/v1"
 	"github.com/openshift/origin/pkg/oc/cli/util/clientcmd"
 	"github.com/openshift/origin/pkg/oc/util/ocscheme"
 )
@@ -183,7 +184,7 @@ func (o *BuildSecretOptions) Complete(f kcmdutil.Factory, cmd *cobra.Command, ar
 		}
 	}
 	o.Builder = f.NewBuilder().
-		WithScheme(ocscheme.ReadingInternalScheme).
+		WithScheme(scheme.Scheme, scheme.Scheme.PrioritizedVersionsAllGroups()...).
 		LocalParam(o.Local).
 		ContinueOnError().
 		NamespaceParam(cmdNamespace).DefaultNamespace().
@@ -237,7 +238,7 @@ func (o *BuildSecretOptions) Run() error {
 		infos = loaded
 	}
 
-	patches := CalculatePatches(infos, o.Encoder, func(info *resource.Info) (bool, error) {
+	patches := CalculatePatchesExternal(infos, func(info *resource.Info) (bool, error) {
 		return o.setBuildSecret(info.Object)
 	})
 
@@ -253,18 +254,18 @@ func (o *BuildSecretOptions) Run() error {
 	for _, patch := range patches {
 		info := patch.Info
 		if patch.Err != nil {
-			errs = append(errs, fmt.Errorf("%s/%s %v", info.Mapping.Resource, info.Name, patch.Err))
+			errs = append(errs, fmt.Errorf("%s/%s %v", info.Mapping.Resource.Resource, info.Name, patch.Err))
 			continue
 		}
 
 		if string(patch.Patch) == "{}" || len(patch.Patch) == 0 {
-			fmt.Fprintf(o.Err, "info: %s %q was not changed\n", info.Mapping.Resource, info.Name)
+			fmt.Fprintf(o.Err, "info: %s %q was not changed\n", info.Mapping.Resource.Resource, info.Name)
 			continue
 		}
 
 		obj, err := resource.NewHelper(info.Client, info.Mapping).Patch(info.Namespace, info.Name, types.StrategicMergePatchType, patch.Patch)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("%s/%s %v", info.Mapping.Resource, info.Name, err))
+			errs = append(errs, fmt.Errorf("%s/%s %v", info.Mapping.Resource.Resource, info.Name, err))
 			continue
 		}
 
@@ -281,7 +282,7 @@ func (o *BuildSecretOptions) Run() error {
 // object type is BuildConfig.
 func (o *BuildSecretOptions) setBuildSecret(obj runtime.Object) (bool, error) {
 	switch buildObj := obj.(type) {
-	case *buildapi.BuildConfig:
+	case *buildv1.BuildConfig:
 		o.updateBuildConfig(buildObj)
 		return true, nil
 	default:
@@ -289,12 +290,12 @@ func (o *BuildSecretOptions) setBuildSecret(obj runtime.Object) (bool, error) {
 	}
 }
 
-func (o *BuildSecretOptions) updateBuildConfig(bc *buildapi.BuildConfig) {
+func (o *BuildSecretOptions) updateBuildConfig(bc *buildv1.BuildConfig) {
 	if o.Push {
 		if o.Remove {
 			bc.Spec.Output.PushSecret = nil
 		} else {
-			bc.Spec.Output.PushSecret = &kapi.LocalObjectReference{
+			bc.Spec.Output.PushSecret = &corev1.LocalObjectReference{
 				Name: o.Secret,
 			}
 		}
@@ -306,7 +307,7 @@ func (o *BuildSecretOptions) updateBuildConfig(bc *buildapi.BuildConfig) {
 			if o.Remove {
 				bc.Spec.Strategy.DockerStrategy.PullSecret = nil
 			} else {
-				bc.Spec.Strategy.DockerStrategy.PullSecret = &kapi.LocalObjectReference{
+				bc.Spec.Strategy.DockerStrategy.PullSecret = &corev1.LocalObjectReference{
 					Name: o.Secret,
 				}
 			}
@@ -314,7 +315,7 @@ func (o *BuildSecretOptions) updateBuildConfig(bc *buildapi.BuildConfig) {
 			if o.Remove {
 				bc.Spec.Strategy.SourceStrategy.PullSecret = nil
 			} else {
-				bc.Spec.Strategy.SourceStrategy.PullSecret = &kapi.LocalObjectReference{
+				bc.Spec.Strategy.SourceStrategy.PullSecret = &corev1.LocalObjectReference{
 					Name: o.Secret,
 				}
 			}
@@ -322,7 +323,7 @@ func (o *BuildSecretOptions) updateBuildConfig(bc *buildapi.BuildConfig) {
 			if o.Remove {
 				bc.Spec.Strategy.CustomStrategy.PullSecret = nil
 			} else {
-				bc.Spec.Strategy.CustomStrategy.PullSecret = &kapi.LocalObjectReference{
+				bc.Spec.Strategy.CustomStrategy.PullSecret = &corev1.LocalObjectReference{
 					Name: o.Secret,
 				}
 			}
@@ -333,7 +334,7 @@ func (o *BuildSecretOptions) updateBuildConfig(bc *buildapi.BuildConfig) {
 		if o.Remove {
 			bc.Spec.Source.SourceSecret = nil
 		} else {
-			bc.Spec.Source.SourceSecret = &kapi.LocalObjectReference{
+			bc.Spec.Source.SourceSecret = &corev1.LocalObjectReference{
 				Name: o.Secret,
 			}
 		}
