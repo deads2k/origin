@@ -66,6 +66,7 @@ var (
 	legacySecurityGroup        = securityapi.LegacyGroupName
 	storageGroup               = storage.GroupName
 	settingsGroup              = settings.GroupName
+	schedulingGroup            = "scheduling.k8s.io"
 
 	authzGroup          = authorizationapi.GroupName
 	kAuthzGroup         = kauthorizationapi.GroupName
@@ -165,6 +166,8 @@ func GetOpenshiftBootstrapClusterRoles() []rbacv1.ClusterRole {
 				rbacv1helpers.NewRule(read...).Groups(settingsGroup).Resources("podpresets").RuleOrDie(),
 
 				rbacv1helpers.NewRule(read...).Groups(storageGroup).Resources("storageclasses", "volumeattachments").RuleOrDie(),
+
+				rbacv1helpers.NewRule(read...).Groups(schedulingGroup).Resources("priorityclasses").RuleOrDie(),
 
 				rbacv1helpers.NewRule(read...).Groups(certificatesGroup).Resources("certificatesigningrequests", "certificatesigningrequests/approval", "certificatesigningrequests/status").RuleOrDie(),
 
