@@ -17,9 +17,9 @@ os::cmd::expect_success_and_text 'oc get all --all-namespaces' 'cmd-printer[\ ]+
 # Test that infos printer supports all outputFormat options
 os::cmd::expect_success_and_text 'oc new-app node -o yaml | oc set env -f - MYVAR=value' 'deploymentconfig.apps.openshift.io "node" updated'
 os::cmd::expect_success 'oc new-app node -o yaml | oc set env -f - MYVAR=value -o custom-colums="NAME:.metadata.name"'
-os::cmd::expect_success_and_text 'oc new-app node -o yaml | oc set env -f - MYVAR=value -o yaml' 'apiVersion: v1'
-os::cmd::expect_success_and_text 'oc new-app node -o yaml | oc set env -f - MYVAR=value -o json' '"apiVersion": "v1"'
+os::cmd::expect_success_and_text 'oc new-app node -o yaml | oc set env -f - MYVAR=value -o yaml' 'apiVersion: apps.openshift.io/v1'
+os::cmd::expect_success_and_text 'oc new-app node -o yaml | oc set env -f - MYVAR=value -o json' '"apiVersion": "apps.openshift.io/v1"'
 os::cmd::expect_success_and_text 'oc new-app node -o yaml | oc set env -f - MYVAR=value -o wide' 'node'
-os::cmd::expect_success_and_text 'oc new-app node -o yaml | oc set env -f - MYVAR=value -o name' 'deploymentconfig/node'
+os::cmd::expect_success_and_text 'oc new-app node -o yaml | oc set env -f - MYVAR=value -o name' 'deploymentconfig.apps.openshift.io/node'
 echo "resource printer: ok"
 os::test::junit::declare_suite_end
