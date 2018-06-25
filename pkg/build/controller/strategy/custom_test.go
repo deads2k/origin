@@ -15,6 +15,7 @@ import (
 	kapi "k8s.io/kubernetes/pkg/apis/core"
 	kapihelper "k8s.io/kubernetes/pkg/apis/core/helper"
 
+	buildapiv1 "github.com/openshift/api/build/v1"
 	buildapi "github.com/openshift/origin/pkg/build/apis/build"
 	_ "github.com/openshift/origin/pkg/build/apis/build/install"
 	"github.com/openshift/origin/pkg/build/util"
@@ -75,7 +76,7 @@ func TestCustomCreateBuildPod(t *testing.T) {
 	if len(actual.Spec.Volumes) != 3 {
 		t.Fatalf("Expected 3 volumes in Build pod, got %d", len(actual.Spec.Volumes))
 	}
-	buildJSON, _ := runtime.Encode(legacyscheme.Codecs.LegacyCodec(buildapi.LegacySchemeGroupVersion), build)
+	buildJSON, _ := runtime.Encode(customBuildEncodingCodecFactory.LegacyCodec(buildapiv1.SchemeGroupVersion), build)
 	errorCases := map[int][]string{
 		0: {"BUILD", string(buildJSON)},
 	}

@@ -10,7 +10,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation"
-	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	kapi "k8s.io/kubernetes/pkg/apis/core"
 	kapihelper "k8s.io/kubernetes/pkg/apis/core/helper"
 
@@ -98,7 +97,7 @@ func TestDockerCreateBuildPod(t *testing.T) {
 		t.Fatalf("Found illegal environment variable 'ILLEGAL' defined on container")
 	}
 
-	buildJSON, _ := runtime.Encode(legacyscheme.Codecs.LegacyCodec(buildapi.LegacySchemeGroupVersion), build)
+	buildJSON, _ := runtime.Encode(buildJSONCodec, build)
 	errorCases := map[int][]string{
 		0: {"BUILD", string(buildJSON)},
 	}

@@ -22,7 +22,6 @@ import (
 var (
 	customBuildEncodingScheme       = runtime.NewScheme()
 	customBuildEncodingCodecFactory = serializer.NewCodecFactory(customBuildEncodingScheme)
-	customBuildJSONCodec            runtime.Encoder
 )
 
 func init() {
