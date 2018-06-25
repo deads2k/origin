@@ -219,7 +219,8 @@ function os::util::list_test_packages_under() {
               -o -path '*vendor/*'            \
               -o -path '*assets/node_modules' \
               -o -path '*test/*'              \
-              -o -path '*pkg/proxy' \
+              -o -path '*pkg/proxy'           \
+              -o -path '*k8s.io/kubernetes/cluster/gce' \
         \) -prune                             \
     \) -name '*_test.go' | xargs -n1 dirname | sort -u | xargs -n1 printf "${OS_GO_PACKAGE}/%s\n"
 
