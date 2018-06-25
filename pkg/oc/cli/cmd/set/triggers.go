@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/dynamic"
 	kapps "k8s.io/kubernetes/pkg/apis/apps"
 	kbatch "k8s.io/kubernetes/pkg/apis/batch"
 	kapi "k8s.io/kubernetes/pkg/apis/core"
@@ -100,6 +101,7 @@ type TriggersOptions struct {
 	Local       bool
 	ShortOutput bool
 	Mapper      meta.RESTMapper
+	Client      dynamic.Interface
 
 	PrintTable  bool
 	PrintObject func([]*resource.Info) error
@@ -247,6 +249,15 @@ func (o *TriggersOptions) Complete(f kcmdutil.Factory, cmd *cobra.Command, args 
 	o.ShortOutput = kcmdutil.GetFlagString(cmd, "output") == "name"
 	o.Mapper = mapper
 
+	clientConfig, err := f.ToRESTConfig()
+	if err != nil {
+		return err
+	}
+	o.Client, err = dynamic.NewForConfig(clientConfig)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -340,15 +351,14 @@ func (o *TriggersOptions) Run() error {
 
 		glog.V(4).Infof("Calculated patch %s", patch.Patch)
 
-		obj, err := resource.NewHelper(info.Client, info.Mapping).Patch(info.Namespace, info.Name, types.StrategicMergePatchType, patch.Patch)
+		actual, err := o.Client.Resource(info.Mapping.Resource).Namespace(info.Namespace).Patch(info.Name, types.StrategicMergePatchType, patch.Patch)
 		if err != nil {
 			handlePodUpdateError(o.Err, err, "triggered")
 			failed = true
 			continue
 		}
 
-		info.Refresh(obj, true)
-		kcmdutil.PrintSuccess(o.ShortOutput, o.Out, info.Object, false, "updated")
+		kcmdutil.PrintSuccess(o.ShortOutput, o.Out, actual, false, "updated")
 	}
 	if failed {
 		return kcmdutil.ErrExit
