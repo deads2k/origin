@@ -97,7 +97,7 @@ os::cmd::expect_success_and_text "oc rsh dc/docker-registry cat config.yml" "500
 os::cmd::expect_success_and_text "oc rsh rc/docker-registry-1 cat config.yml" "5000"
 
 # services can end up on any IP.  Make sure we get the IP we need for the docker registry
-DOCKER_REGISTRY=$(oc get --template="{{ .spec.clusterIP }}:{{ (index .spec.ports 0).port }}" service.v1 docker-registry)
+DOCKER_REGISTRY=$(oc get --template="{{ .spec.clusterIP }}:{{ (index .spec.ports 0).port }}" service docker-registry)
 
 os::cmd::expect_success_and_text "dig @${DNS_SERVICE_IP} docker-registry.default.svc.cluster.local. +short A | head -n 1" "${DOCKER_REGISTRY/:5000}"
 
