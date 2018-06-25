@@ -54,7 +54,6 @@ var nodeSelector = map[string]string{"node": "mynode"}
 func testSTICreateBuildPod(t *testing.T, rootAllowed bool) {
 	strategy := &SourceBuildStrategy{
 		Image:          "sti-test-image",
-		Codec:          legacyscheme.Codecs.LegacyCodec(buildapi.LegacySchemeGroupVersion),
 		SecurityClient: newFakeSecurityClient(rootAllowed),
 	}
 
@@ -173,7 +172,6 @@ func testSTICreateBuildPod(t *testing.T, rootAllowed bool) {
 func TestS2IBuildLongName(t *testing.T) {
 	strategy := &SourceBuildStrategy{
 		Image:          "sti-test-image",
-		Codec:          legacyscheme.Codecs.LegacyCodec(buildapi.LegacySchemeGroupVersion),
 		SecurityClient: newFakeSecurityClient(true),
 	}
 	build := mockSTIBuild()

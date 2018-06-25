@@ -23,7 +23,6 @@ import (
 func TestDockerCreateBuildPod(t *testing.T) {
 	strategy := DockerBuildStrategy{
 		Image: "docker-test-image",
-		Codec: legacyscheme.Codecs.LegacyCodec(buildapi.LegacySchemeGroupVersion),
 	}
 
 	build := mockDockerBuild()
@@ -115,7 +114,6 @@ func TestDockerCreateBuildPod(t *testing.T) {
 func TestDockerBuildLongName(t *testing.T) {
 	strategy := DockerBuildStrategy{
 		Image: "docker-test-image",
-		Codec: legacyscheme.Codecs.LegacyCodec(buildapi.LegacySchemeGroupVersion),
 	}
 	build := mockDockerBuild()
 	build.Name = strings.Repeat("a", validation.DNS1123LabelMaxLength*2)
