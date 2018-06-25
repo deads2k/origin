@@ -485,27 +485,27 @@ os::cmd::expect_success 'oc delete user  orphaned-user  --cascade=false'
 os::cmd::expect_success 'oc get identities/anypassword:cascaded-user'
 os::cmd::expect_success 'oc get identities/anypassword:orphaned-user'
 # Verify orphaned user references are left
-os::cmd::expect_success_and_text     "oc get clusterrolebindings/cluster-admins clusterrolebindings/cluster-admin --output-version=v1 -o jsonpath='{ .items[*].subjects }'" 'orphaned-user'
-os::cmd::expect_success_and_text     "oc get rolebindings/cluster-admin         --output-version=v1 --template='{{.subjects}}' -n default" 'orphaned-user'
-os::cmd::expect_success_and_text     "oc get scc/restricted                     --output-version=v1 --template='{{.users}}'"               'orphaned-user'
-os::cmd::expect_success_and_text     "oc get group/cascaded-group               --output-version=v1 --template='{{.users}}'"               'orphaned-user'
+os::cmd::expect_success_and_text     "oc get clusterrolebindings.v1.rbac/cluster-admins clusterrolebindings.v1.rbac/cluster-admin -o jsonpath='{ .items[*].subjects }'" 'orphaned-user'
+os::cmd::expect_success_and_text     "oc get rolebindings.v1.rbac/cluster-admin         --template='{{.subjects}}' -n default" 'orphaned-user'
+os::cmd::expect_success_and_text     "oc get scc.v1.security.openshift/restricted                     --template='{{.users}}'"               'orphaned-user'
+os::cmd::expect_success_and_text     "oc get group.v1.user/cascaded-group               --template='{{.users}}'"               'orphaned-user'
 # Verify cascaded user references are removed
-os::cmd::expect_success_and_not_text "oc get clusterrolebindings/cluster-admins clusterrolebindings/cluster-admin --output-version=v1 -o jsonpath='{ .items[*].subjects }'" 'cascaded-user'
-os::cmd::expect_success_and_not_text "oc get rolebindings/cluster-admin         --output-version=v1 --template='{{.subjects}}' -n default" 'cascaded-user'
-os::cmd::expect_success_and_not_text "oc get scc/restricted                     --output-version=v1 --template='{{.users}}'"               'cascaded-user'
-os::cmd::expect_success_and_not_text "oc get group/cascaded-group               --output-version=v1 --template='{{.users}}'"               'cascaded-user'
+os::cmd::expect_success_and_not_text "oc get clusterrolebindings.v1.rbac/cluster-admins clusterrolebindings/cluster-admin -o jsonpath='{ .items[*].subjects }'" 'cascaded-user'
+os::cmd::expect_success_and_not_text "oc get rolebindings.v1.rbac/cluster-admin         --template='{{.subjects}}' -n default" 'cascaded-user'
+os::cmd::expect_success_and_not_text "oc get scc.v1.security.openshift/restricted                     --template='{{.users}}'"               'cascaded-user'
+os::cmd::expect_success_and_not_text "oc get group.v1.user/cascaded-group               --template='{{.users}}'"               'cascaded-user'
 
 # Delete groups
 os::cmd::expect_success 'oc delete group cascaded-group'
 os::cmd::expect_success 'oc delete group orphaned-group --cascade=false'
 # Verify orphaned group references are left
-os::cmd::expect_success_and_text     "oc get clusterrolebindings/cluster-admins clusterrolebindings/cluster-admin --output-version=v1 -o jsonpath='{ .items[*].subjects }'" 'orphaned-group'
-os::cmd::expect_success_and_text     "oc get rolebindings/cluster-admin         --output-version=v1 --template='{{.subjects}}' -n default" 'orphaned-group'
-os::cmd::expect_success_and_text     "oc get scc/restricted                     --output-version=v1 --template='{{.groups}}'"              'orphaned-group'
+os::cmd::expect_success_and_text     "oc get clusterrolebindings.v1.rbac/cluster-admins clusterrolebindings/cluster-admin -o jsonpath='{ .items[*].subjects }'" 'orphaned-group'
+os::cmd::expect_success_and_text     "oc get rolebindings.v1.rbac/cluster-admin         --template='{{.subjects}}' -n default" 'orphaned-group'
+os::cmd::expect_success_and_text     "oc get scc.v1.security.openshift/restricted                     --template='{{.groups}}'"              'orphaned-group'
 # Verify cascaded group references are removed
-os::cmd::expect_success_and_not_text "oc get clusterrolebindings/cluster-admins clusterrolebindings/cluster-admin --output-version=v1 -o jsonpath='{ .items[*].subjects }'" 'cascaded-group'
-os::cmd::expect_success_and_not_text "oc get rolebindings/cluster-admin         --output-version=v1 --template='{{.subjects}}' -n default" 'cascaded-group'
-os::cmd::expect_success_and_not_text "oc get scc/restricted                     --output-version=v1 --template='{{.groups}}'"              'cascaded-group'
+os::cmd::expect_success_and_not_text "oc get clusterrolebindings.v1.rbac/cluster-admins clusterrolebindings/cluster-admin -o jsonpath='{ .items[*].subjects }'" 'cascaded-group'
+os::cmd::expect_success_and_not_text "oc get rolebindings.v1.rbac/cluster-admin         --template='{{.subjects}}' -n default" 'cascaded-group'
+os::cmd::expect_success_and_not_text "oc get scc.v1.security.openshift/restricted                     --template='{{.groups}}'"              'cascaded-group'
 echo "user-group-cascade: ok"
 os::test::junit::declare_suite_end
 
