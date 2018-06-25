@@ -1,13 +1,13 @@
 package test
 
 import (
+	"context"
 	"sync"
 
 	kapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metainternal "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	apirequest "k8s.io/apiserver/pkg/endpoints/request"
 
 	buildapi "github.com/openshift/origin/pkg/build/apis/build"
 )
