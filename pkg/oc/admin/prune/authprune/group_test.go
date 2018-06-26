@@ -39,12 +39,10 @@ func TestGroupReaper(t *testing.T) {
 		expected []interface{}
 	}{
 		{
-			name:    "no objects",
-			group:   "mygroup",
-			objects: []runtime.Object{},
-			expected: []interface{}{
-				clientgotesting.DeleteActionImpl{ActionImpl: clientgotesting.ActionImpl{Verb: "delete", Resource: groupsResource}, Name: "mygroup"},
-			},
+			name:     "no objects",
+			group:    "mygroup",
+			objects:  []runtime.Object{},
+			expected: []interface{}{},
 		},
 		{
 			name:  "cluster bindings",
@@ -72,7 +70,6 @@ func TestGroupReaper(t *testing.T) {
 					RoleRef:    kapi.ObjectReference{Name: "role"},
 					Subjects:   []kapi.ObjectReference{},
 				}},
-				clientgotesting.DeleteActionImpl{ActionImpl: clientgotesting.ActionImpl{Verb: "delete", Resource: groupsResource}, Name: "mygroup"},
 			},
 		},
 		{
@@ -101,7 +98,6 @@ func TestGroupReaper(t *testing.T) {
 					RoleRef:    kapi.ObjectReference{Name: "role"},
 					Subjects:   []kapi.ObjectReference{},
 				}},
-				clientgotesting.DeleteActionImpl{ActionImpl: clientgotesting.ActionImpl{Verb: "delete", Resource: groupsResource}, Name: "mygroup"},
 			},
 		},
 		{
@@ -127,7 +123,6 @@ func TestGroupReaper(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Name: "scc-one-subject"},
 					Groups:     []string{},
 				}},
-				clientgotesting.DeleteActionImpl{ActionImpl: clientgotesting.ActionImpl{Verb: "delete", Resource: groupsResource}, Name: "mygroup"},
 			},
 		},
 	}
@@ -139,10 +134,12 @@ func TestGroupReaper(t *testing.T) {
 
 		actual := []interface{}{}
 		oreactor := func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+			t.Logf("oreactor: %#v", action)
 			actual = append(actual, action)
 			return false, nil, nil
 		}
 		kreactor := func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+			t.Logf("kreactor: %#v", action)
 			actual = append(actual, action)
 			return false, nil, nil
 		}
