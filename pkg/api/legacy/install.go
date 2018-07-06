@@ -36,6 +36,16 @@ var (
 	GroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1"}
 )
 
+// DEPRECATED
+func Resource(resource string) schema.GroupResource {
+	return schema.GroupResource{Group: GroupName, Resource: resource}
+}
+
+// DEPRECATED
+func Kind(kind string) schema.GroupKind {
+	return schema.GroupKind{Group: GroupName, Kind: kind}
+}
+
 func InstallLegacyApps(scheme *runtime.Scheme) {
 	utilruntime.Must(appsapi.AddToSchemeInCoreGroup(scheme))
 	utilruntime.Must(appsapiv1.AddToSchemeInCoreGroup(scheme))

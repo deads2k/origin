@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/openshift/api/template"
 	templatev1 "github.com/openshift/api/template/v1"
 	faketemplatev1 "github.com/openshift/client-go/template/clientset/versioned/typed/template/v1/fake"
 	templatelister "github.com/openshift/client-go/template/listers/template/v1"
@@ -46,7 +47,7 @@ func TestProvisionConflict(t *testing.T) {
 	faketemplateclient.AddReactor("update", "brokertemplateinstances", func(action clienttesting.Action) (bool, runtime.Object, error) {
 		if conflict > 0 {
 			conflict--
-			return true, nil, errors.NewConflict(templatev1.Resource("brokertemplateinstance"), "", nil)
+			return true, nil, errors.NewConflict(template.Resource("brokertemplateinstance"), "", nil)
 		}
 		return true, &templatev1.BrokerTemplateInstance{}, nil
 	})

@@ -15,6 +15,7 @@ import (
 	informers "k8s.io/kubernetes/pkg/client/informers/informers_generated/internalversion"
 	kubeadmission "k8s.io/kubernetes/pkg/kubeapiserver/admission"
 
+	"github.com/openshift/origin/pkg/api/legacy"
 	"github.com/openshift/origin/pkg/image/admission/testutil"
 	imageapi "github.com/openshift/origin/pkg/image/apis/image"
 )
@@ -218,7 +219,7 @@ func TestSupports(t *testing.T) {
 	}
 	ilr := plugin.(*imageLimitRangerPlugin)
 	for _, r := range resources {
-		attr := kadmission.NewAttributesRecord(nil, nil, imageapi.LegacyKind("ImageStreamMapping").WithVersion(""), "ns", "name", imageapi.LegacyResource(r).WithVersion("version"), "", kadmission.Create, nil)
+		attr := kadmission.NewAttributesRecord(nil, nil, imageapi.LegacyKind("ImageStreamMapping").WithVersion(""), "ns", "name", legacy.Resource(r).WithVersion("version"), "", kadmission.Create, nil)
 		if !ilr.SupportsAttributes(attr) {
 			t.Errorf("plugin is expected to support %#v", r)
 		}

@@ -12,6 +12,7 @@ import (
 	kuser "k8s.io/apiserver/pkg/authentication/user"
 	apirequest "k8s.io/apiserver/pkg/endpoints/request"
 
+	"github.com/openshift/api/user"
 	userapi "github.com/openshift/api/user/v1"
 	userclient "github.com/openshift/client-go/user/clientset/versioned/typed/user/v1"
 	authapi "github.com/openshift/origin/pkg/oauthserver/api"
@@ -111,7 +112,7 @@ func (p *provisioningIdentityMapper) createIdentityAndMapping(ctx context.Contex
 
 func (p *provisioningIdentityMapper) getMapping(ctx context.Context, identity *userapi.Identity) (kuser.Info, error) {
 	if len(identity.User.Name) == 0 {
-		return nil, kerrs.NewNotFound(userapi.Resource("useridentitymapping"), identity.Name)
+		return nil, kerrs.NewNotFound(user.Resource("useridentitymapping"), identity.Name)
 	}
 	u, err := p.user.Get(identity.User.Name, metav1.GetOptions{})
 	if err != nil {
@@ -119,11 +120,11 @@ func (p *provisioningIdentityMapper) getMapping(ctx context.Context, identity *u
 	}
 	if u.UID != identity.User.UID {
 		glog.Errorf("identity.user.uid (%s) and user.uid (%s) do not match for identity %s", identity.User.UID, u.UID, identity.Name)
-		return nil, kerrs.NewNotFound(userapi.Resource("useridentitymapping"), identity.Name)
+		return nil, kerrs.NewNotFound(user.Resource("useridentitymapping"), identity.Name)
 	}
 	if !sets.NewString(u.Identities...).Has(identity.Name) {
 		glog.Errorf("user.identities (%#v) does not include identity (%s)", u, identity.Name)
-		return nil, kerrs.NewNotFound(userapi.Resource("useridentitymapping"), identity.Name)
+		return nil, kerrs.NewNotFound(user.Resource("useridentitymapping"), identity.Name)
 	}
 	return &kuser.DefaultInfo{
 		Name:   u.Name,

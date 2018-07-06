@@ -32,10 +32,6 @@ func Resource(resource string) schema.GroupResource {
 	return SchemeGroupVersion.WithResource(resource).GroupResource()
 }
 
-func LegacyResource(resource string) schema.GroupResource {
-	return LegacySchemeGroupVersion.WithResource(resource).GroupResource()
-}
-
 // addKnownTypes adds types to API group
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,

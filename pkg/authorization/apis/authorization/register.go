@@ -36,12 +36,6 @@ func Resource(resource string) schema.GroupResource {
 	return SchemeGroupVersion.WithResource(resource).GroupResource()
 }
 
-// LegacyResource takes an unqualified resource and returns back a Group qualified
-// GroupResource using legacy API
-func LegacyResource(resource string) schema.GroupResource {
-	return LegacySchemeGroupVersion.WithResource(resource).GroupResource()
-}
-
 // Adds the list of known types to api.Scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,

@@ -16,6 +16,7 @@ import (
 	rbacregistry "k8s.io/kubernetes/pkg/registry/rbac"
 
 	buildclient "github.com/openshift/client-go/build/clientset/versioned"
+	"github.com/openshift/origin/pkg/api/legacy"
 	"github.com/openshift/origin/pkg/authorization/util"
 	buildapi "github.com/openshift/origin/pkg/build/apis/build"
 	oadmission "github.com/openshift/origin/pkg/cmd/server/admission"
@@ -51,9 +52,9 @@ func (a *buildByStrategy) Admit(attr admission.Attributes) error {
 	gr := attr.GetResource().GroupResource()
 	switch gr {
 	case buildapi.Resource("buildconfigs"),
-		buildapi.LegacyResource("buildconfigs"):
+		legacy.Resource("buildconfigs"):
 	case buildapi.Resource("builds"),
-		buildapi.LegacyResource("builds"):
+		legacy.Resource("builds"):
 		// Explicitly exclude the builds/details subresource because it's only
 		// updating commit info and cannot change build type.
 		if attr.GetSubresource() == "details" {
@@ -184,7 +185,7 @@ func (a *buildByStrategy) checkBuildRequestAuthorization(req *buildapi.BuildRequ
 	gr := attr.GetResource().GroupResource()
 	switch gr {
 	case buildapi.Resource("builds"),
-		buildapi.LegacyResource("builds"):
+		legacy.Resource("builds"):
 		build, err := a.buildClient.BuildV1().Builds(attr.GetNamespace()).Get(req.Name, metav1.GetOptions{})
 		if err != nil {
 			return admission.NewForbidden(attr, err)
@@ -196,7 +197,7 @@ func (a *buildByStrategy) checkBuildRequestAuthorization(req *buildapi.BuildRequ
 		return a.checkBuildAuthorization(internalBuild, attr)
 
 	case buildapi.Resource("buildconfigs"),
-		buildapi.LegacyResource("buildconfigs"):
+		legacy.Resource("buildconfigs"):
 		buildConfig, err := a.buildClient.BuildV1().BuildConfigs(attr.GetNamespace()).Get(req.Name, metav1.GetOptions{})
 		if err != nil {
 			return admission.NewForbidden(attr, err)

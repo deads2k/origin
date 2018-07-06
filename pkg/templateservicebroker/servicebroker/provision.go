@@ -15,6 +15,7 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/util/retry"
 
+	"github.com/openshift/api/template"
 	templateapiv1 "github.com/openshift/api/template/v1"
 	"github.com/openshift/origin/pkg/templateservicebroker/openservicebroker/api"
 	"github.com/openshift/origin/pkg/templateservicebroker/util"
@@ -289,11 +290,11 @@ func (b *Broker) Provision(u user.Info, instanceID string, preq *api.ProvisionRe
 
 	namespace := preq.Context.Namespace
 
-	template, err := b.lister.GetByUID(preq.ServiceID)
+	templateObj, err := b.lister.GetByUID(preq.ServiceID)
 	if err != nil && !kerrors.IsNotFound(err) {
 		return api.BadRequest(err)
 	}
-	if template == nil {
+	if templateObj == nil {
 		// If the template is not found, it is just possible that it is because
 		// the cache is out of date.  To be sure, fall back to O(N) search of
 		// templates in configured namespace(s).
@@ -307,27 +308,27 @@ func (b *Broker) Provision(u user.Info, instanceID string, preq *api.ProvisionRe
 			}
 			for _, t := range templates {
 				if string(t.UID) == preq.ServiceID {
-					template = t
+					templateObj = t
 					break out
 				}
 			}
 		}
 	}
-	if template == nil {
+	if templateObj == nil {
 		glog.V(4).Infof("Template service broker: template %s not found", preq.ServiceID)
-		return api.BadRequest(kerrors.NewNotFound(templateapiv1.Resource("templates"), preq.ServiceID))
+		return api.BadRequest(kerrors.NewNotFound(template.Resource("templates"), preq.ServiceID))
 	}
-	if _, ok := b.templateNamespaces[template.Namespace]; !ok {
-		return api.BadRequest(kerrors.NewNotFound(templateapiv1.Resource("templates"), preq.ServiceID))
+	if _, ok := b.templateNamespaces[templateObj.Namespace]; !ok {
+		return api.BadRequest(kerrors.NewNotFound(template.Resource("templates"), preq.ServiceID))
 	}
 
 	// with groups in the user.Info vs. the username only form of auth, we can SAR for get access on template resources
 	if err := util.Authorize(b.kc.Authorization().SubjectAccessReviews(), u, &authorizationv1.ResourceAttributes{
-		Namespace: template.Namespace,
+		Namespace: templateObj.Namespace,
 		Verb:      "get",
 		Group:     templateapiv1.GroupName,
 		Resource:  "templates",
-		Name:      template.Name,
+		Name:      templateObj.Name,
 	}); err != nil {
 		return api.Forbidden(err)
 	}
@@ -373,7 +374,7 @@ func (b *Broker) Provision(u user.Info, instanceID string, preq *api.ProvisionRe
 		return resp
 	}
 
-	templateInstance, resp := b.ensureTemplateInstance(u, namespace, brokerTemplateInstance, instanceID, template, secret, &didWork)
+	templateInstance, resp := b.ensureTemplateInstance(u, namespace, brokerTemplateInstance, instanceID, templateObj, secret, &didWork)
 	if resp != nil {
 		return resp
 	}

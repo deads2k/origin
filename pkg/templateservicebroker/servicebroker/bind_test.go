@@ -11,6 +11,7 @@ import (
 	"github.com/openshift/origin/pkg/templateservicebroker/openservicebroker/api"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/openshift/api/template"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -218,7 +219,7 @@ func TestBindConflict(t *testing.T) {
 	faketemplateclient.AddReactor("update", "brokertemplateinstances", func(action clienttesting.Action) (bool, runtime.Object, error) {
 		if conflict > 0 {
 			conflict--
-			return true, nil, errors.NewConflict(templatev1.Resource("brokertemplateinstance"), "", nil)
+			return true, nil, errors.NewConflict(template.Resource("brokertemplateinstance"), "", nil)
 		}
 		return true, &templatev1.BrokerTemplateInstance{}, nil
 	})

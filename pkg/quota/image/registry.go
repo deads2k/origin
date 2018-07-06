@@ -8,6 +8,7 @@ import (
 	"k8s.io/kubernetes/pkg/quota"
 	"k8s.io/kubernetes/pkg/quota/generic"
 
+	"github.com/openshift/origin/pkg/api/legacy"
 	imageapi "github.com/openshift/origin/pkg/image/apis/image"
 	imageinternalversion "github.com/openshift/origin/pkg/image/generated/informers/internalversion/image/internalversion"
 	imageclient "github.com/openshift/origin/pkg/image/generated/internalclientset/typed/image/internalversion"
@@ -43,11 +44,11 @@ func NewReplenishmentEvaluatorsForAdmission(isInformer imageinternalversion.Imag
 		NewImageStreamImportEvaluator(isInformer.Lister()),
 		&evaluatorForLegacyResource{
 			Evaluator:           NewImageStreamTagEvaluator(isInformer.Lister(), imageClient),
-			LegacyGroupResource: imageapi.LegacyResource("imagestreamtags"),
+			LegacyGroupResource: legacy.Resource("imagestreamtags"),
 		},
 		&evaluatorForLegacyResource{
 			Evaluator:           NewImageStreamImportEvaluator(isInformer.Lister()),
-			LegacyGroupResource: imageapi.LegacyResource("imagestreamimports"),
+			LegacyGroupResource: legacy.Resource("imagestreamimports"),
 		},
 	}
 	// these evaluators require an alias for backwards compatibility

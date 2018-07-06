@@ -17,6 +17,7 @@ import (
 	coreclient "k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset/typed/core/internalversion"
 	kadmission "k8s.io/kubernetes/pkg/kubeapiserver/admission"
 
+	"github.com/openshift/origin/pkg/api/legacy"
 	jenkinscontroller "github.com/openshift/origin/pkg/build/admission/jenkinsbootstrapper/jenkins"
 	buildapi "github.com/openshift/origin/pkg/build/apis/build"
 	authenticationclient "github.com/openshift/origin/pkg/client/impersonatingclient"
@@ -67,8 +68,8 @@ func (a *jenkinsBootstrapper) Admit(attributes admission.Attributes) error {
 	switch gr {
 	case buildapi.Resource("buildconfigs"),
 		buildapi.Resource("builds"),
-		buildapi.LegacyResource("buildconfigs"),
-		buildapi.LegacyResource("builds"):
+		legacy.Resource("buildconfigs"),
+		legacy.Resource("builds"):
 	default:
 		return nil
 	}

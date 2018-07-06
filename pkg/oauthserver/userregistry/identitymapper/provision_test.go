@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/diff"
 	clienttesting "k8s.io/client-go/testing"
 
+	"github.com/openshift/api/user"
 	userapi "github.com/openshift/api/user/v1"
 	userv1fakeclient "github.com/openshift/client-go/user/clientset/versioned/fake"
 	authapi "github.com/openshift/origin/pkg/oauthserver/api"
@@ -95,7 +96,7 @@ func TestProvision(t *testing.T) {
 			ProviderUserName: "bob",
 
 			NewIdentityGetterResponses: []interface{}{
-				kerrs.NewAlreadyExists(userapi.Resource("User"), "bob"),
+				kerrs.NewAlreadyExists(user.Resource("User"), "bob"),
 				makeUser("bobUserUID", "bob", "idp:bob"),
 			},
 
@@ -126,7 +127,7 @@ func TestProvision(t *testing.T) {
 			ProviderUserName: "bob",
 
 			NewIdentityGetterResponses: []interface{}{
-				kerrs.NewConflict(userapi.Resource("User"), "bob", fmt.Errorf("conflict")),
+				kerrs.NewConflict(user.Resource("User"), "bob", fmt.Errorf("conflict")),
 				makeUser("bobUserUID", "bob", "idp:bob"),
 			},
 
@@ -157,10 +158,10 @@ func TestProvision(t *testing.T) {
 			ProviderUserName: "bob",
 
 			NewIdentityGetterResponses: []interface{}{
-				kerrs.NewConflict(userapi.Resource("User"), "bob", fmt.Errorf("conflict")),
-				kerrs.NewConflict(userapi.Resource("User"), "bob", fmt.Errorf("conflict")),
-				kerrs.NewConflict(userapi.Resource("User"), "bob", fmt.Errorf("conflict")),
-				kerrs.NewConflict(userapi.Resource("User"), "bob", fmt.Errorf("conflict")),
+				kerrs.NewConflict(user.Resource("User"), "bob", fmt.Errorf("conflict")),
+				kerrs.NewConflict(user.Resource("User"), "bob", fmt.Errorf("conflict")),
+				kerrs.NewConflict(user.Resource("User"), "bob", fmt.Errorf("conflict")),
+				kerrs.NewConflict(user.Resource("User"), "bob", fmt.Errorf("conflict")),
 			},
 
 			ValidateActions: func(t *testing.T, actions []clienttesting.Action) {

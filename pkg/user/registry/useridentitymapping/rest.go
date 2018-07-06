@@ -14,6 +14,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 	kapi "k8s.io/kubernetes/pkg/apis/core"
 
+	"github.com/openshift/api/user"
 	userapi "github.com/openshift/api/user/v1"
 	userclient "github.com/openshift/client-go/user/clientset/versioned/typed/user/v1"
 	userinternal "github.com/openshift/origin/pkg/user/apis/user"
@@ -96,7 +97,7 @@ func (s *REST) createOrUpdate(ctx context.Context, obj runtime.Object, forceCrea
 
 	// If we expect to be creating, fail if the mapping already existed
 	if forceCreate && oldMappingErr == nil {
-		return nil, false, kerrs.NewAlreadyExists(userapi.Resource("useridentitymapping"), oldMapping.Name)
+		return nil, false, kerrs.NewAlreadyExists(user.Resource("useridentitymapping"), oldMapping.Name)
 	}
 
 	// Allow update to create if missing
@@ -109,7 +110,7 @@ func (s *REST) createOrUpdate(ctx context.Context, obj runtime.Object, forceCrea
 
 		// Ensure resource version is not specified
 		if len(mapping.ResourceVersion) > 0 {
-			return nil, false, kerrs.NewNotFound(userapi.Resource("useridentitymapping"), mapping.Name)
+			return nil, false, kerrs.NewNotFound(user.Resource("useridentitymapping"), mapping.Name)
 		}
 	} else {
 		// Pre-update checks with access to oldMapping
@@ -119,7 +120,7 @@ func (s *REST) createOrUpdate(ctx context.Context, obj runtime.Object, forceCrea
 
 		// Ensure resource versions match
 		if len(mapping.ResourceVersion) > 0 && mapping.ResourceVersion != oldMapping.ResourceVersion {
-			return nil, false, kerrs.NewConflict(userapi.Resource("useridentitymapping"), mapping.Name, fmt.Errorf("the resource was updated to %s", oldMapping.ResourceVersion))
+			return nil, false, kerrs.NewConflict(user.Resource("useridentitymapping"), mapping.Name, fmt.Errorf("the resource was updated to %s", oldMapping.ResourceVersion))
 		}
 
 		// If we're "updating" to the user we're already pointing to, we're already done
@@ -209,13 +210,13 @@ func (s *REST) Delete(ctx context.Context, name string, options *metav1.DeleteOp
 // a nil mappingErr means all objects were retrieved without errors, and correctly reference each other
 func (s *REST) getRelatedObjects(ctx context.Context, name string, options *metav1.GetOptions) (
 	identity *userapi.Identity, identityErr error,
-	user *userapi.User, userErr error,
+	userObj *userapi.User, userErr error,
 	mapping *userinternal.UserIdentityMapping, mappingErr error,
 ) {
 	// Initialize errors to NotFound
-	identityErr = kerrs.NewNotFound(userapi.Resource("identity"), name)
-	userErr = kerrs.NewNotFound(userapi.Resource("user"), "")
-	mappingErr = kerrs.NewNotFound(userapi.Resource("useridentitymapping"), name)
+	identityErr = kerrs.NewNotFound(user.Resource("identity"), name)
+	userErr = kerrs.NewNotFound(user.Resource("user"), "")
+	mappingErr = kerrs.NewNotFound(user.Resource("useridentitymapping"), name)
 
 	// GetIdentities identity
 	identity, identityErr = s.identityClient.Get(name, *options)
@@ -227,20 +228,20 @@ func (s *REST) getRelatedObjects(ctx context.Context, name string, options *meta
 	}
 
 	// GetIdentities user
-	user, userErr = s.userClient.Get(identity.User.Name, *options)
+	userObj, userErr = s.userClient.Get(identity.User.Name, *options)
 	if userErr != nil {
 		return
 	}
 
 	// Ensure relational integrity
-	if !identityReferencesUser(identity, user) {
+	if !identityReferencesUser(identity, userObj) {
 		return
 	}
-	if !userReferencesIdentity(user, identity) {
+	if !userReferencesIdentity(userObj, identity) {
 		return
 	}
 
-	mapping, mappingErr = mappingFor(user, identity)
+	mapping, mappingErr = mappingFor(userObj, identity)
 
 	return
 }

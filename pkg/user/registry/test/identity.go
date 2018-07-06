@@ -4,6 +4,7 @@ import (
 	kerrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/openshift/api/user"
 	userapi "github.com/openshift/api/user/v1"
 	"github.com/openshift/client-go/user/clientset/versioned/typed/user/v1/fake"
 )
@@ -39,7 +40,7 @@ func (r *IdentityRegistry) Get(name string, options metav1.GetOptions) (*userapi
 	if err, ok := r.GetErr[name]; ok {
 		return nil, err
 	}
-	return nil, kerrs.NewNotFound(userapi.Resource("identity"), name)
+	return nil, kerrs.NewNotFound(user.Resource("identity"), name)
 }
 
 func (r *IdentityRegistry) Create(u *userapi.Identity) (*userapi.Identity, error) {

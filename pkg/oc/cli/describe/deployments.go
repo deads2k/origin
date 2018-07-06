@@ -19,6 +19,7 @@ import (
 	kprinters "k8s.io/kubernetes/pkg/printers"
 	kinternalprinters "k8s.io/kubernetes/pkg/printers/internalversion"
 
+	"github.com/openshift/origin/pkg/api/legacy"
 	appsapi "github.com/openshift/origin/pkg/apps/apis/apps"
 	appsinternalversion "github.com/openshift/origin/pkg/apps/generated/internalclientset/typed/apps/internalversion"
 	appsutil "github.com/openshift/origin/pkg/apps/util"
@@ -297,7 +298,7 @@ func printDeploymentConfigSpec(kc kclientset.Interface, dc appsapi.DeploymentCon
 		[]schema.GroupResource{
 			appsapi.Resource("DeploymentConfig"),
 			// this needs to remain as long as HPA supports putting in the "wrong" DC scheme
-			appsapi.LegacyResource("DeploymentConfig"),
+			legacy.Resource("DeploymentConfig"),
 		},
 		dc.Namespace, dc.Name, kc, w)
 
