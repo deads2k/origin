@@ -76,7 +76,7 @@ func TestCustomCreateBuildPod(t *testing.T) {
 	if len(actual.Spec.Volumes) != 4 {
 		t.Fatalf("Expected 4 volumes in Build pod, got %d", len(actual.Spec.Volumes))
 	}
-	buildJSON, _ := runtime.Encode(customBuildEncodingCodecFactory.LegacyCodec(buildapiv1.SchemeGroupVersion), build)
+	buildJSON, _ := runtime.Encode(customBuildEncodingCodecFactory.LegacyCodec(buildapiv1.GroupVersion), build)
 	errorCases := map[int][]string{
 		0: {"BUILD", string(buildJSON)},
 	}

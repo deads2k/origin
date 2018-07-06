@@ -39,7 +39,7 @@ func TestLegacyResourceToKind(t *testing.T) {
 
 func TestResourceToKind(t *testing.T) {
 	// Ensure we resolve to latest.Version
-	expectedGVK := userapiv1.SchemeGroupVersion.WithKind("User")
+	expectedGVK := userapiv1.GroupVersion.WithKind("User")
 	gvk, err := legacyscheme.Registry.RESTMapper().KindFor(userapi.SchemeGroupVersion.WithResource("User"))
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)

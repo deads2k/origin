@@ -39,5 +39,5 @@ func init() {
 	utilruntime.Must(coreapi.AddToScheme(annotationEncodingScheme))
 	utilruntime.Must(appsapi.AddToScheme(annotationEncodingScheme))
 	annotationEncoderCodecFactory := serializer.NewCodecFactory(annotationEncodingScheme)
-	annotationEncoder = annotationEncoderCodecFactory.LegacyCodec(appsv1.SchemeGroupVersion)
+	annotationEncoder = annotationEncoderCodecFactory.LegacyCodec(appsv1.GroupVersion)
 }

@@ -31,7 +31,7 @@ func (b *Broker) ensureSecret(u user.Info, namespace string, brokerTemplateInsta
 			Name: instanceID,
 			OwnerReferences: []metav1.OwnerReference{
 				{
-					APIVersion:         templateapiv1.SchemeGroupVersion.String(),
+					APIVersion:         templateapiv1.GroupVersion.String(),
 					Kind:               "BrokerTemplateInstance",
 					Name:               brokerTemplateInstance.Name,
 					UID:                brokerTemplateInstance.UID,
@@ -107,7 +107,7 @@ func (b *Broker) ensureTemplateInstance(u user.Info, namespace string, brokerTem
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
-					APIVersion:         templateapiv1.SchemeGroupVersion.String(),
+					APIVersion:         templateapiv1.GroupVersion.String(),
 					Kind:               "BrokerTemplateInstance",
 					Name:               brokerTemplateInstance.Name,
 					UID:                brokerTemplateInstance.UID,

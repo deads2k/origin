@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	encoder                 = codecFactory.LegacyCodec(oauthapiv1.SchemeGroupVersion)
+	encoder                 = codecFactory.LegacyCodec(oauthapiv1.GroupVersion)
 	decoder                 = codecFactory.UniversalDecoder()
 	serviceAccountsResource = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "serviceaccounts"}
 	secretsResource         = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "secrets"}

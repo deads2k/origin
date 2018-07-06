@@ -73,7 +73,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 	}
 
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(networkapiv1.GroupName, c.ExtraConfig.Scheme, metav1.ParameterCodec, c.ExtraConfig.Codecs)
-	apiGroupInfo.VersionedResourcesStorageMap[networkapiv1.SchemeGroupVersion.Version] = v1Storage
+	apiGroupInfo.VersionedResourcesStorageMap[networkapiv1.GroupVersion.Version] = v1Storage
 	if err := s.GenericAPIServer.InstallAPIGroup(&apiGroupInfo); err != nil {
 		return nil, err
 	}

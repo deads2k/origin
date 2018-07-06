@@ -337,7 +337,7 @@ func (r *REST) Create(ctx context.Context, obj runtime.Object, createValidation 
 
 	// ensure defaulting is applied by round trip converting
 	// TODO: convert to using versioned types.
-	external, err := legacyscheme.Scheme.ConvertToVersion(stream, imageapiv1.SchemeGroupVersion)
+	external, err := legacyscheme.Scheme.ConvertToVersion(stream, imageapiv1.GroupVersion)
 	if err != nil {
 		return nil, err
 	}

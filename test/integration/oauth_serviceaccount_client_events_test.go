@@ -205,7 +205,7 @@ func buildRedirectObjectReferenceString(t *testing.T, kind, name, group string) 
 			Group: group,
 		},
 	}
-	data, err := runtime.Encode(legacyscheme.Codecs.LegacyCodec(oauthapiv1.SchemeGroupVersion), ref)
+	data, err := runtime.Encode(legacyscheme.Codecs.LegacyCodec(oauthapiv1.GroupVersion), ref)
 	if err != nil {
 		t.Fatalf("unexpected err %v", err)
 	}

@@ -488,8 +488,8 @@ func (g *BuildGenerator) generateBuildFromConfig(ctx context.Context, bc *builda
 			Labels: bcCopy.Labels,
 			OwnerReferences: []metav1.OwnerReference{
 				{
-					APIVersion: buildapiv1.SchemeGroupVersion.String(), // BuildConfig.APIVersion is not populated
-					Kind:       "BuildConfig",                          // BuildConfig.Kind is not populated
+					APIVersion: buildapiv1.GroupVersion.String(), // BuildConfig.APIVersion is not populated
+					Kind:       "BuildConfig",                    // BuildConfig.Kind is not populated
 					Name:       bcCopy.Name,
 					UID:        bcCopy.UID,
 					Controller: &t,

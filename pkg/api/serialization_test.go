@@ -159,7 +159,7 @@ func originFuzzer(t *testing.T, seed int64) *fuzz.Fuzzer {
 				case *extensions.Deployment:
 					codec = apitesting.TestCodec(legacyscheme.Codecs, extensionsv1beta1.SchemeGroupVersion)
 				case *build.BuildConfig:
-					codec = apitesting.TestCodec(legacyscheme.Codecs, buildv1.SchemeGroupVersion)
+					codec = apitesting.TestCodec(legacyscheme.Codecs, buildv1.GroupVersion)
 				default:
 					codec = apitesting.TestCodec(legacyscheme.Codecs, v1.SchemeGroupVersion)
 				}

@@ -52,7 +52,7 @@ var BuildContainerNames = []string{CustomBuild, StiBuild, DockerBuild}
 var (
 	// BuildControllerRefKind contains the schema.GroupVersionKind for builds.
 	// This is used in the ownerRef of builder pods.
-	BuildControllerRefKind = buildapiv1.SchemeGroupVersion.WithKind("Build")
+	BuildControllerRefKind = buildapiv1.GroupVersion.WithKind("Build")
 )
 
 // FatalError is an error which can't be retried.

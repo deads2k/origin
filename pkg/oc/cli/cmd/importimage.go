@@ -263,7 +263,7 @@ func (o *ImportImageOptions) createImageImport() (*imageapi.ImageStream, *imagea
 		stream, isi = o.newImageStream()
 		// ensure defaulting is applied by round trip converting
 		// TODO: convert to using versioned types.
-		external, err := legacyscheme.Scheme.ConvertToVersion(stream, imageapiv1.SchemeGroupVersion)
+		external, err := legacyscheme.Scheme.ConvertToVersion(stream, imageapiv1.GroupVersion)
 		if err != nil {
 			return nil, nil, err
 		}

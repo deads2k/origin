@@ -770,7 +770,7 @@ func CreateBuildPatch(older, newer *buildapi.Build) ([]byte, error) {
 }
 
 func ApplyBuildPatch(build *buildapi.Build, patch []byte) (*buildapi.Build, error) {
-	versionedBuild, err := buildscheme.InternalExternalScheme.ConvertToVersion(build, buildapiv1.SchemeGroupVersion)
+	versionedBuild, err := buildscheme.InternalExternalScheme.ConvertToVersion(build, buildapiv1.GroupVersion)
 	if err != nil {
 		return nil, err
 	}

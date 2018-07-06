@@ -145,13 +145,13 @@ var (
 )
 
 func init() {
-	if err := webconsoleconfigv1.AddToScheme(webconsoleConfigScheme); err != nil {
+	if err := webconsoleconfigv1.Install(webconsoleConfigScheme); err != nil {
 		panic(err)
 	}
 }
 
 func readWebConsoleConfiguration(objBytes string) (*webconsoleconfigv1.WebConsoleConfiguration, error) {
-	defaultConfigObj, err := runtime.Decode(webconsoleConfigCodecs.UniversalDecoder(webconsoleconfigv1.SchemeGroupVersion), []byte(objBytes))
+	defaultConfigObj, err := runtime.Decode(webconsoleConfigCodecs.UniversalDecoder(webconsoleconfigv1.GroupVersion), []byte(objBytes))
 	if err != nil {
 		return nil, err
 	}

@@ -162,7 +162,7 @@ func CreateEdgeRoute(f kcmdutil.Factory, out io.Writer, cmd *cobra.Command, args
 			return err
 		}
 	}
-	actualRoute.SetGroupVersionKind(routev1.SchemeGroupVersion.WithKind("Route"))
+	actualRoute.SetGroupVersionKind(routev1.GroupVersion.WithKind("Route"))
 
 	shortOutput := kcmdutil.GetFlagString(cmd, "output") == "name"
 	if !shortOutput && kcmdutil.GetFlagString(cmd, "output") != "" {
@@ -272,7 +272,7 @@ func CreatePassthroughRoute(f kcmdutil.Factory, out io.Writer, cmd *cobra.Comman
 		}
 	}
 
-	actualRoute.SetGroupVersionKind(routev1.SchemeGroupVersion.WithKind("Route"))
+	actualRoute.SetGroupVersionKind(routev1.GroupVersion.WithKind("Route"))
 
 	shortOutput := kcmdutil.GetFlagString(cmd, "output") == "name"
 	if !shortOutput && kcmdutil.GetFlagString(cmd, "output") != "" {
@@ -423,7 +423,7 @@ func CreateReencryptRoute(printFlags *genericclioptions.PrintFlags, f kcmdutil.F
 			return err
 		}
 	}
-	actualRoute.SetGroupVersionKind(routev1.SchemeGroupVersion.WithKind("Route"))
+	actualRoute.SetGroupVersionKind(routev1.GroupVersion.WithKind("Route"))
 
 	return printer.PrintObj(actualRoute, out)
 }

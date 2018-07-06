@@ -34,7 +34,7 @@ var (
 
 func init() {
 	// webhooks need to return legacy build serialization when hit via oapi
-	utilruntime.Must(buildv1.AddToScheme(webhookEncodingScheme))
+	utilruntime.Must(buildv1.Install(webhookEncodingScheme))
 	utilruntime.Must(buildv1helpers.AddToScheme(webhookEncodingScheme))
 	utilruntime.Must(buildv1.DeprecatedInstallWithoutGroup(webhookEncodingScheme))
 	utilruntime.Must(buildv1helpers.AddToSchemeInCoreGroup(webhookEncodingScheme))

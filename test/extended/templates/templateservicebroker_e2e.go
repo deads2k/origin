@@ -195,7 +195,7 @@ var _ = g.Describe("[Conformance][templates] templateservicebroker end-to-end te
 			api.OpenServiceBrokerInstanceExternalID: templateInstance.Name,
 		}))
 		o.Expect(templateInstance.OwnerReferences).To(o.ContainElement(metav1.OwnerReference{
-			APIVersion:         templateapiv1.SchemeGroupVersion.String(),
+			APIVersion:         templateapiv1.GroupVersion.String(),
 			Kind:               "BrokerTemplateInstance",
 			Name:               brokerTemplateInstance.Name,
 			UID:                brokerTemplateInstance.UID,
@@ -226,7 +226,7 @@ var _ = g.Describe("[Conformance][templates] templateservicebroker end-to-end te
 		}
 
 		o.Expect(secret.OwnerReferences).To(o.ContainElement(metav1.OwnerReference{
-			APIVersion:         templateapiv1.SchemeGroupVersion.String(),
+			APIVersion:         templateapiv1.GroupVersion.String(),
 			Kind:               "BrokerTemplateInstance",
 			Name:               brokerTemplateInstance.Name,
 			UID:                brokerTemplateInstance.UID,

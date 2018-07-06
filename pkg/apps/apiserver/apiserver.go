@@ -79,7 +79,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 
 	parameterCodec := runtime.NewParameterCodec(c.ExtraConfig.Scheme)
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(appsapiv1.GroupName, c.ExtraConfig.Scheme, parameterCodec, c.ExtraConfig.Codecs)
-	apiGroupInfo.VersionedResourcesStorageMap[appsapiv1.SchemeGroupVersion.Version] = v1Storage
+	apiGroupInfo.VersionedResourcesStorageMap[appsapiv1.GroupVersion.Version] = v1Storage
 
 	if err := s.GenericAPIServer.InstallAPIGroup(&apiGroupInfo); err != nil {
 		return nil, err

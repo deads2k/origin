@@ -23,7 +23,7 @@ var (
 func init() {
 	// TODO only use external versions, so we only add external types
 	buildinstall.Install(buildEncodingScheme)
-	buildJSONCodec = buildEncodingCodecFactory.LegacyCodec(buildv1.SchemeGroupVersion)
+	buildJSONCodec = buildEncodingCodecFactory.LegacyCodec(buildv1.GroupVersion)
 }
 
 // DockerBuildStrategy creates a Docker build using a Docker builder image.

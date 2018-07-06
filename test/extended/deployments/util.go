@@ -621,8 +621,8 @@ func readDCFixture(path string) (*appsapi.DeploymentConfig, error) {
 	}
 	appsScheme := runtime.NewScheme()
 	appsCodecs := serializer.NewCodecFactory(appsScheme)
-	appsapiv1.AddToScheme(appsScheme)
-	obj, err := runtime.Decode(appsCodecs.UniversalDecoder(appsapiv1.SchemeGroupVersion), content)
+	appsapiv1.Install(appsScheme)
+	obj, err := runtime.Decode(appsCodecs.UniversalDecoder(appsapiv1.GroupVersion), content)
 	if err != nil {
 		return nil, err
 	}

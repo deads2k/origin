@@ -43,7 +43,7 @@ func init() {
 	utilruntime.Must(buildv1helpers.AddToScheme(EncoderScheme))
 	utilruntime.Must(buildapi.AddToScheme(EncoderScheme))
 	annotationEncoderCodecFactory := serializer.NewCodecFactory(EncoderScheme)
-	Encoder = annotationEncoderCodecFactory.LegacyCodec(buildv1.SchemeGroupVersion)
+	Encoder = annotationEncoderCodecFactory.LegacyCodec(buildv1.GroupVersion)
 
 	utilruntime.Must(buildv1.Install(InternalExternalScheme))
 	utilruntime.Must(buildv1helpers.AddToScheme(InternalExternalScheme))

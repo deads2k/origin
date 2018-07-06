@@ -37,8 +37,8 @@ var (
 func init() {
 	// TODO only use external versions, so we only add external types
 	legacy.InstallLegacyBuild(buildEnvVarScheme)
-	utilruntime.Must(buildapiv1.AddToScheme(buildEnvVarScheme))
-	buildEnvVarJSONCodec = buildEnvVarCodecFactory.LegacyCodec(buildapiv1.SchemeGroupVersion, legacy.GroupVersion)
+	utilruntime.Must(buildapiv1.Install(buildEnvVarScheme))
+	buildEnvVarJSONCodec = buildEnvVarCodecFactory.LegacyCodec(buildapiv1.GroupVersion, legacy.GroupVersion)
 }
 
 type builder interface {

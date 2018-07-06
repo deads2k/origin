@@ -294,7 +294,7 @@ func RemoveTriggerTypes(config *appsapi.DeploymentConfig, triggerTypes ...appsap
 }
 
 func RoundTripConfig(t *testing.T, config *appsapi.DeploymentConfig) *appsapi.DeploymentConfig {
-	versioned, err := legacyscheme.Scheme.ConvertToVersion(config, appsv1.SchemeGroupVersion)
+	versioned, err := legacyscheme.Scheme.ConvertToVersion(config, appsv1.GroupVersion)
 	if err != nil {
 		t.Errorf("unexpected conversion error: %v", err)
 		return nil

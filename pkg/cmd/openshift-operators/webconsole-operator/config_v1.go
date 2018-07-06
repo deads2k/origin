@@ -34,7 +34,7 @@ func init() {
 }
 
 func readWebConsoleConfiguration(objBytes string) (*webconsoleconfigv1.WebConsoleConfiguration, error) {
-	defaultConfigObj, err := runtime.Decode(webconsoleCodecs.UniversalDecoder(webconsoleconfigv1.SchemeGroupVersion), []byte(objBytes))
+	defaultConfigObj, err := runtime.Decode(webconsoleCodecs.UniversalDecoder(webconsoleconfigv1.GroupVersion), []byte(objBytes))
 	if err != nil {
 		return nil, err
 	}

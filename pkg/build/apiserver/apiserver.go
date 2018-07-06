@@ -88,7 +88,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 
 	parameterCodec := runtime.NewParameterCodec(c.ExtraConfig.Scheme)
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(buildapiv1.GroupName, c.ExtraConfig.Scheme, parameterCodec, c.ExtraConfig.Codecs)
-	apiGroupInfo.VersionedResourcesStorageMap[buildapiv1.SchemeGroupVersion.Version] = v1Storage
+	apiGroupInfo.VersionedResourcesStorageMap[buildapiv1.GroupVersion.Version] = v1Storage
 	if err := s.GenericAPIServer.InstallAPIGroup(&apiGroupInfo); err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func (c *completedConfig) newV1RESTStorage() (map[string]rest.Storage, error) {
 		// We use the buildapiv1 schemegroup to encode the Build that gets
 		// returned. As such, we need to make sure that the GroupVersion we use
 		// is the same API version that the storage is going to be used for.
-		buildapiv1.SchemeGroupVersion,
+		buildapiv1.GroupVersion,
 		map[string]webhook.Plugin{
 			"generic":   generic.New(),
 			"github":    github.New(),

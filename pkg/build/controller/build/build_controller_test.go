@@ -97,7 +97,7 @@ func TestHandleBuild(t *testing.T) {
 	withOwnerReference := func(pod *v1.Pod, build *buildapi.Build) *v1.Pod {
 		t := true
 		pod.OwnerReferences = []metav1.OwnerReference{{
-			APIVersion: buildapiv1.SchemeGroupVersion.String(),
+			APIVersion: buildapiv1.GroupVersion.String(),
 			Kind:       "Build",
 			Name:       build.Name,
 			Controller: &t,
@@ -574,7 +574,7 @@ func TestCreateBuildPodWithExistingRelatedPod(t *testing.T) {
 			Namespace: build.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				{
-					APIVersion: buildapiv1.SchemeGroupVersion.String(),
+					APIVersion: buildapiv1.GroupVersion.String(),
 					Kind:       "Build",
 					Name:       build.Name,
 					Controller: &tru,

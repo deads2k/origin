@@ -18,40 +18,40 @@ import (
 )
 
 func AddOpenShiftExternalToScheme(scheme *runtime.Scheme) error {
-	if err := appsv1.AddToScheme(scheme); err != nil {
+	if err := appsv1.Install(scheme); err != nil {
 		return err
 	}
-	if err := authorizationv1.AddToScheme(scheme); err != nil {
+	if err := authorizationv1.Install(scheme); err != nil {
 		return err
 	}
-	if err := buildv1.AddToScheme(scheme); err != nil {
+	if err := buildv1.Install(scheme); err != nil {
 		return err
 	}
-	if err := imagev1.AddToScheme(scheme); err != nil {
+	if err := imagev1.Install(scheme); err != nil {
 		return err
 	}
-	if err := networkv1.AddToScheme(scheme); err != nil {
+	if err := networkv1.Install(scheme); err != nil {
 		return err
 	}
-	if err := oauthv1.AddToScheme(scheme); err != nil {
+	if err := oauthv1.Install(scheme); err != nil {
 		return err
 	}
-	if err := projectv1.AddToScheme(scheme); err != nil {
+	if err := projectv1.Install(scheme); err != nil {
 		return err
 	}
-	if err := quotav1.AddToScheme(scheme); err != nil {
+	if err := quotav1.Install(scheme); err != nil {
 		return err
 	}
-	if err := routev1.AddToScheme(scheme); err != nil {
+	if err := routev1.Install(scheme); err != nil {
 		return err
 	}
-	if err := securityv1.AddToScheme(scheme); err != nil {
+	if err := securityv1.Install(scheme); err != nil {
 		return err
 	}
-	if err := templatev1.AddToScheme(scheme); err != nil {
+	if err := templatev1.Install(scheme); err != nil {
 		return err
 	}
-	if err := userv1.AddToScheme(scheme); err != nil {
+	if err := userv1.Install(scheme); err != nil {
 		return err
 	}
 

@@ -39,7 +39,7 @@ func DefaultTemplate() *templateapi.Template {
 		oapi.OpenShiftDisplayName:   "${" + ProjectDisplayNameParam + "}",
 		projectapi.ProjectRequester: "${" + ProjectRequesterParam + "}",
 	}
-	if err := templateapi.AddObjectsToTemplate(ret, []runtime.Object{project}, projectapiv1.SchemeGroupVersion); err != nil {
+	if err := templateapi.AddObjectsToTemplate(ret, []runtime.Object{project}, projectapiv1.GroupVersion); err != nil {
 		panic(err)
 	}
 

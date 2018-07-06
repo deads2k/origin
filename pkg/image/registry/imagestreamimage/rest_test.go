@@ -207,7 +207,7 @@ func TestGet(t *testing.T) {
 				_, err := client.Put(
 					context.TODO(),
 					etcdtest.AddPrefix("/imagestreams/"+test.repo.Namespace+"/"+test.repo.Name),
-					runtime.EncodeOrDie(legacyscheme.Codecs.LegacyCodec(imagev1.SchemeGroupVersion), test.repo),
+					runtime.EncodeOrDie(legacyscheme.Codecs.LegacyCodec(imagev1.GroupVersion), test.repo),
 				)
 				if err != nil {
 					t.Errorf("Unexpected error: %v", err)
@@ -218,7 +218,7 @@ func TestGet(t *testing.T) {
 				_, err := client.Put(
 					context.TODO(),
 					etcdtest.AddPrefix("/images/"+test.image.Name),
-					runtime.EncodeOrDie(legacyscheme.Codecs.LegacyCodec(imagev1.SchemeGroupVersion), test.image),
+					runtime.EncodeOrDie(legacyscheme.Codecs.LegacyCodec(imagev1.GroupVersion), test.image),
 				)
 				if err != nil {
 					t.Errorf("Unexpected error: %v", err)

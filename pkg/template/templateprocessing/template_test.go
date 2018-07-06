@@ -228,7 +228,7 @@ func TestProcessValue(t *testing.T) {
 	if len(errs) > 0 {
 		t.Fatalf("unexpected error: %v", errs)
 	}
-	result, err := runtime.Encode(legacyscheme.Codecs.LegacyCodec(templateapiv1.SchemeGroupVersion), &template)
+	result, err := runtime.Encode(legacyscheme.Codecs.LegacyCodec(templateapiv1.GroupVersion), &template)
 	if err != nil {
 		t.Fatalf("unexpected error during encoding Config: %#v", err)
 	}
@@ -403,7 +403,7 @@ func TestEvaluateLabels(t *testing.T) {
 			t.Errorf("%s: unexpected error: %v", k, errs)
 			continue
 		}
-		result, err := runtime.Encode(legacyscheme.Codecs.LegacyCodec(templateapiv1.SchemeGroupVersion), &template)
+		result, err := runtime.Encode(legacyscheme.Codecs.LegacyCodec(templateapiv1.GroupVersion), &template)
 		if err != nil {
 			t.Errorf("%s: unexpected error: %v", k, err)
 			continue
@@ -443,11 +443,11 @@ func TestProcessTemplateParameters(t *testing.T) {
 	if len(errs) > 0 {
 		t.Fatalf("unexpected error: %v", errs)
 	}
-	result, err := runtime.Encode(legacyscheme.Codecs.LegacyCodec(templateapiv1.SchemeGroupVersion), &template)
+	result, err := runtime.Encode(legacyscheme.Codecs.LegacyCodec(templateapiv1.GroupVersion), &template)
 	if err != nil {
 		t.Fatalf("unexpected error during encoding Config: %#v", err)
 	}
-	exp, _ := runtime.Encode(legacyscheme.Codecs.LegacyCodec(templateapiv1.SchemeGroupVersion), &expectedTemplate)
+	exp, _ := runtime.Encode(legacyscheme.Codecs.LegacyCodec(templateapiv1.GroupVersion), &expectedTemplate)
 
 	if string(result) != string(exp) {
 		t.Errorf("unexpected output: %s", diff.StringDiff(string(exp), string(result)))

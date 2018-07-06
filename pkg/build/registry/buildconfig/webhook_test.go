@@ -83,7 +83,7 @@ func newStorage() (*WebHook, *buildConfigInstantiator, *fakebuildclient.Clientse
 		"errhook":   &plugin{Err: webhook.ErrHookNotEnabled},
 		"err":       &plugin{Err: fmt.Errorf("test error")},
 	}
-	hook := newWebHookREST(fakeBuildClient.Build(), nil, bci, buildapiv1.SchemeGroupVersion, plugins)
+	hook := newWebHookREST(fakeBuildClient.Build(), nil, bci, buildapiv1.GroupVersion, plugins)
 
 	return hook, bci, fakeBuildClient
 }
@@ -343,7 +343,7 @@ var mockBuildStrategy = buildapi.BuildStrategy{
 
 func TestParseUrlError(t *testing.T) {
 	responder := &fakeResponder{}
-	handler, _ := newWebHookREST(fakebuildclient.NewSimpleClientset(testBuildConfig).Build(), nil, &okBuildConfigInstantiator{}, buildapiv1.SchemeGroupVersion, map[string]webhook.Plugin{"github": github.New(), "gitlab": gitlab.New(), "bitbucket": bitbucket.New()}).
+	handler, _ := newWebHookREST(fakebuildclient.NewSimpleClientset(testBuildConfig).Build(), nil, &okBuildConfigInstantiator{}, buildapiv1.GroupVersion, map[string]webhook.Plugin{"github": github.New(), "gitlab": gitlab.New(), "bitbucket": bitbucket.New()}).
 		Connect(apirequest.WithNamespace(apirequest.NewDefaultContext(), testBuildConfig.Namespace), "build100", &kapi.PodProxyOptions{Path: ""}, responder)
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -360,7 +360,7 @@ func TestParseUrlError(t *testing.T) {
 
 func TestParseUrlOK(t *testing.T) {
 	responder := &fakeResponder{}
-	handler, _ := newWebHookREST(fakebuildclient.NewSimpleClientset(testBuildConfig).Build(), nil, &okBuildConfigInstantiator{}, buildapiv1.SchemeGroupVersion, map[string]webhook.Plugin{"pathplugin": &pathPlugin{}}).
+	handler, _ := newWebHookREST(fakebuildclient.NewSimpleClientset(testBuildConfig).Build(), nil, &okBuildConfigInstantiator{}, buildapiv1.GroupVersion, map[string]webhook.Plugin{"pathplugin": &pathPlugin{}}).
 		Connect(apirequest.WithNamespace(apirequest.NewDefaultContext(), testBuildConfig.Namespace), "build100", &kapi.PodProxyOptions{Path: "secret101/pathplugin"}, responder)
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -377,7 +377,7 @@ func TestParseUrlOK(t *testing.T) {
 func TestParseUrlLong(t *testing.T) {
 	plugin := &pathPlugin{}
 	responder := &fakeResponder{}
-	handler, _ := newWebHookREST(fakebuildclient.NewSimpleClientset(testBuildConfig).Build(), nil, &okBuildConfigInstantiator{}, buildapiv1.SchemeGroupVersion, map[string]webhook.Plugin{"pathplugin": plugin}).
+	handler, _ := newWebHookREST(fakebuildclient.NewSimpleClientset(testBuildConfig).Build(), nil, &okBuildConfigInstantiator{}, buildapiv1.GroupVersion, map[string]webhook.Plugin{"pathplugin": plugin}).
 		Connect(apirequest.WithNamespace(apirequest.NewDefaultContext(), testBuildConfig.Namespace), "build100", &kapi.PodProxyOptions{Path: "secret101/pathplugin/some/more/args"}, responder)
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -394,7 +394,7 @@ func TestParseUrlLong(t *testing.T) {
 
 func TestInvokeWebhookMissingPlugin(t *testing.T) {
 	responder := &fakeResponder{}
-	handler, _ := newWebHookREST(fakebuildclient.NewSimpleClientset(testBuildConfig).Build(), nil, &okBuildConfigInstantiator{}, buildapiv1.SchemeGroupVersion, map[string]webhook.Plugin{"pathplugin": &pathPlugin{}}).
+	handler, _ := newWebHookREST(fakebuildclient.NewSimpleClientset(testBuildConfig).Build(), nil, &okBuildConfigInstantiator{}, buildapiv1.GroupVersion, map[string]webhook.Plugin{"pathplugin": &pathPlugin{}}).
 		Connect(apirequest.WithNamespace(apirequest.NewDefaultContext(), testBuildConfig.Namespace), "build100", &kapi.PodProxyOptions{Path: "secret101/missingplugin"}, responder)
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -411,7 +411,7 @@ func TestInvokeWebhookMissingPlugin(t *testing.T) {
 
 func TestInvokeWebhookErrorBuildConfigInstantiate(t *testing.T) {
 	responder := &fakeResponder{}
-	handler, _ := newWebHookREST(fakebuildclient.NewSimpleClientset(testBuildConfig).Build(), nil, &errorBuildConfigInstantiator{}, buildapiv1.SchemeGroupVersion, map[string]webhook.Plugin{"pathplugin": &pathPlugin{}}).
+	handler, _ := newWebHookREST(fakebuildclient.NewSimpleClientset(testBuildConfig).Build(), nil, &errorBuildConfigInstantiator{}, buildapiv1.GroupVersion, map[string]webhook.Plugin{"pathplugin": &pathPlugin{}}).
 		Connect(apirequest.WithNamespace(apirequest.NewDefaultContext(), testBuildConfig.Namespace), "build100", &kapi.PodProxyOptions{Path: "secret101/pathplugin"}, responder)
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -428,7 +428,7 @@ func TestInvokeWebhookErrorBuildConfigInstantiate(t *testing.T) {
 
 func TestInvokeWebhookErrorGetConfig(t *testing.T) {
 	responder := &fakeResponder{}
-	handler, _ := newWebHookREST(fakebuildclient.NewSimpleClientset(testBuildConfig).Build(), nil, &okBuildConfigInstantiator{}, buildapiv1.SchemeGroupVersion, map[string]webhook.Plugin{"pathplugin": &pathPlugin{}}).
+	handler, _ := newWebHookREST(fakebuildclient.NewSimpleClientset(testBuildConfig).Build(), nil, &okBuildConfigInstantiator{}, buildapiv1.GroupVersion, map[string]webhook.Plugin{"pathplugin": &pathPlugin{}}).
 		Connect(apirequest.WithNamespace(apirequest.NewDefaultContext(), testBuildConfig.Namespace), "badbuild100", &kapi.PodProxyOptions{Path: "secret101/pathplugin"}, responder)
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -447,7 +447,7 @@ func TestInvokeWebhookErrorGetConfig(t *testing.T) {
 
 func TestInvokeWebhookErrorCreateBuild(t *testing.T) {
 	responder := &fakeResponder{}
-	handler, _ := newWebHookREST(fakebuildclient.NewSimpleClientset(testBuildConfig).Build(), nil, &okBuildConfigInstantiator{}, buildapiv1.SchemeGroupVersion, map[string]webhook.Plugin{"errPlugin": &errPlugin{}}).
+	handler, _ := newWebHookREST(fakebuildclient.NewSimpleClientset(testBuildConfig).Build(), nil, &okBuildConfigInstantiator{}, buildapiv1.GroupVersion, map[string]webhook.Plugin{"errPlugin": &errPlugin{}}).
 		Connect(apirequest.WithNamespace(apirequest.NewDefaultContext(), testBuildConfig.Namespace), "build100", &kapi.PodProxyOptions{Path: "secret101/errPlugin"}, responder)
 	server := httptest.NewServer(handler)
 	defer server.Close()

@@ -198,7 +198,7 @@ func TestRootRedirect(t *testing.T) {
 	webconsoleConfigCodecs := serializer.NewCodecFactory(webconsoleConfigScheme)
 	webConsoleURL := "https://127.0.0.42/console"
 
-	if err := webconsoleconfigv1.AddToScheme(webconsoleConfigScheme); err != nil {
+	if err := webconsoleconfigv1.Install(webconsoleConfigScheme); err != nil {
 		t.Fatalf("Unextecpted error: %v", err)
 	}
 
@@ -221,7 +221,7 @@ func TestRootRedirect(t *testing.T) {
 			ConsolePublicURL: webConsoleURL,
 		},
 	}
-	data, err := runtime.Encode(webconsoleConfigCodecs.LegacyCodec(webconsoleconfigv1.SchemeGroupVersion), &consoleConfig)
+	data, err := runtime.Encode(webconsoleConfigCodecs.LegacyCodec(webconsoleconfigv1.GroupVersion), &consoleConfig)
 	if err != nil {
 		t.Fatalf("Unextecpted error: %v", err)
 	}
@@ -447,7 +447,7 @@ func TestApiGroups(t *testing.T) {
 	}
 
 	t.Logf("Looking for builds resource in resource discovery")
-	resources, err := kclientset.Discovery().ServerResourcesForGroupVersion(buildv1.SchemeGroupVersion.String())
+	resources, err := kclientset.Discovery().ServerResourcesForGroupVersion(buildv1.GroupVersion.String())
 	if err != nil {
 		t.Fatalf("unexpected resource discovery error: %v", err)
 	}
@@ -480,7 +480,7 @@ func TestApiGroups(t *testing.T) {
 	defer kclientset.Core().Namespaces().Delete(ns, &metav1.DeleteOptions{})
 
 	t.Logf("GETting builds")
-	req, err := http.NewRequest("GET", masterConfig.OAuthConfig.MasterPublicURL+fmt.Sprintf("/apis/%s/%s", buildv1.GroupName, buildv1.SchemeGroupVersion.Version), nil)
+	req, err := http.NewRequest("GET", masterConfig.OAuthConfig.MasterPublicURL+fmt.Sprintf("/apis/%s/%s", buildv1.GroupName, buildv1.GroupVersion.Version), nil)
 	req.Header.Set("Accept", "*/*")
 	resp, err := kclientset.Discovery().RESTClient().(*rest.RESTClient).Client.Transport.RoundTrip(req)
 	if err != nil {
@@ -498,7 +498,7 @@ func TestApiGroups(t *testing.T) {
 	}
 
 	t.Logf("GETting builds again")
-	req, err = http.NewRequest("GET", masterConfig.OAuthConfig.MasterPublicURL+fmt.Sprintf("/apis/%s/%s/namespaces/%s/builds/%s", buildv1.GroupName, buildv1.SchemeGroupVersion.Version, ns, originalBuild.Name), nil)
+	req, err = http.NewRequest("GET", masterConfig.OAuthConfig.MasterPublicURL+fmt.Sprintf("/apis/%s/%s/namespaces/%s/builds/%s", buildv1.GroupName, buildv1.GroupVersion.Version, ns, originalBuild.Name), nil)
 	req.Header.Set("Accept", "*/*")
 	resp, err = kclientset.Discovery().RESTClient().(*rest.RESTClient).Client.Transport.RoundTrip(req)
 	if err != nil {
@@ -508,9 +508,9 @@ func TestApiGroups(t *testing.T) {
 		t.Fatalf("Expected %d, got %d", http.StatusOK, resp.StatusCode)
 	}
 	body, _ := ioutil.ReadAll(resp.Body)
-	codec := legacyscheme.Codecs.LegacyCodec(buildv1.SchemeGroupVersion)
+	codec := legacyscheme.Codecs.LegacyCodec(buildv1.GroupVersion)
 	respBuild := &buildv1.Build{}
-	gvk := buildv1.SchemeGroupVersion.WithKind("Build")
+	gvk := buildv1.GroupVersion.WithKind("Build")
 	respObj, _, err := codec.Decode(body, &gvk, respBuild)
 	if err != nil {
 		t.Fatalf("Unexpected conversion error, body=%q: %v", string(body), err)
@@ -519,7 +519,7 @@ func TestApiGroups(t *testing.T) {
 	if !ok {
 		t.Fatalf("Unexpected type %T, expected buildv1.Build", respObj)
 	}
-	if got, expected := respBuild.APIVersion, buildv1.SchemeGroupVersion.String(); got != expected {
+	if got, expected := respBuild.APIVersion, buildv1.GroupVersion.String(); got != expected {
 		t.Fatalf("Unexpected APIVersion: got=%q, expected=%q", got, expected)
 	}
 	if got, expected := respBuild.Name, originalBuild.Name; got != expected {

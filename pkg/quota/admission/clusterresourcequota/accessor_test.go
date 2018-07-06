@@ -136,12 +136,12 @@ func TestUpdateQuota(t *testing.T) {
 			}
 		}
 
-		expectedV1, err := legacyscheme.Scheme.ConvertToVersion(tc.expectedQuota(), quotaapiv1.SchemeGroupVersion)
+		expectedV1, err := legacyscheme.Scheme.ConvertToVersion(tc.expectedQuota(), quotaapiv1.GroupVersion)
 		if err != nil {
 			t.Errorf("%s: unexpected error: %v", tc.name, err)
 			continue
 		}
-		actualV1, err := legacyscheme.Scheme.ConvertToVersion(actualQuota, quotaapiv1.SchemeGroupVersion)
+		actualV1, err := legacyscheme.Scheme.ConvertToVersion(actualQuota, quotaapiv1.GroupVersion)
 		if err != nil {
 			t.Errorf("%s: unexpected error: %v", tc.name, err)
 			continue
@@ -328,12 +328,12 @@ func TestGetQuota(t *testing.T) {
 		if !equality.Semantic.DeepEqual(expectedQuotas, actualQuotaPointers) {
 			t.Errorf("%s: expectedLen: %v actualLen: %v", tc.name, len(expectedQuotas), len(actualQuotas))
 			for i := range expectedQuotas {
-				expectedV1, err := legacyscheme.Scheme.ConvertToVersion(expectedQuotas[i], quotaapiv1.SchemeGroupVersion)
+				expectedV1, err := legacyscheme.Scheme.ConvertToVersion(expectedQuotas[i], quotaapiv1.GroupVersion)
 				if err != nil {
 					t.Errorf("%s: unexpected error: %v", tc.name, err)
 					continue
 				}
-				actualV1, err := legacyscheme.Scheme.ConvertToVersion(actualQuotaPointers[i], quotaapiv1.SchemeGroupVersion)
+				actualV1, err := legacyscheme.Scheme.ConvertToVersion(actualQuotaPointers[i], quotaapiv1.GroupVersion)
 				if err != nil {
 					t.Errorf("%s: unexpected error: %v", tc.name, err)
 					continue

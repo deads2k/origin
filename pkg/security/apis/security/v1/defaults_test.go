@@ -14,7 +14,7 @@ import (
 )
 
 func roundTrip(t *testing.T, obj runtime.Object) runtime.Object {
-	codec := legacyscheme.Codecs.LegacyCodec(versioned.SchemeGroupVersion)
+	codec := legacyscheme.Codecs.LegacyCodec(versioned.GroupVersion)
 	data, err := runtime.Encode(codec, obj)
 	if err != nil {
 		t.Errorf("%v\n %#v", err, obj)

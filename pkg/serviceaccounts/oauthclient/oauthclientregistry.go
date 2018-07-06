@@ -48,7 +48,7 @@ var (
 	}
 
 	emptyGroupKind       = schema.GroupKind{} // Used with static redirect URIs
-	routeGroupKind       = routeapi.SchemeGroupVersion.WithKind(routeKind).GroupKind()
+	routeGroupKind       = routeapi.GroupVersion.WithKind(routeKind).GroupKind()
 	legacyRouteGroupKind = legacy.GroupVersion.WithKind(routeKind).GroupKind() // to support redirect reference with old group
 
 	scheme       = runtime.NewScheme()

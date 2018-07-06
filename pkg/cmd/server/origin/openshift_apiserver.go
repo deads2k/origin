@@ -238,7 +238,7 @@ func (c *completedConfig) withAppsAPIServer(delegateAPIServer genericapiserver.D
 	}
 	server.GenericAPIServer.PrepareRun() // this triggers openapi construction
 
-	return server.GenericAPIServer, &legacyStorageVersionMutator{version: oappsapiv1.SchemeGroupVersion, storage: storage}, nil
+	return server.GenericAPIServer, &legacyStorageVersionMutator{version: oappsapiv1.GroupVersion, storage: storage}, nil
 }
 
 func (c *completedConfig) withAuthorizationAPIServer(delegateAPIServer genericapiserver.DelegationTarget) (genericapiserver.DelegationTarget, legacyStorageMutator, error) {
@@ -264,7 +264,7 @@ func (c *completedConfig) withAuthorizationAPIServer(delegateAPIServer genericap
 	}
 	server.GenericAPIServer.PrepareRun() // this triggers openapi construction
 
-	return server.GenericAPIServer, &legacyStorageVersionMutator{version: authorizationapiv1.SchemeGroupVersion, storage: storage}, nil
+	return server.GenericAPIServer, &legacyStorageVersionMutator{version: authorizationapiv1.GroupVersion, storage: storage}, nil
 }
 
 func (c *completedConfig) withBuildAPIServer(delegateAPIServer genericapiserver.DelegationTarget) (genericapiserver.DelegationTarget, legacyStorageMutator, error) {
@@ -288,7 +288,7 @@ func (c *completedConfig) withBuildAPIServer(delegateAPIServer genericapiserver.
 	}
 	server.GenericAPIServer.PrepareRun() // this triggers openapi construction
 
-	return server.GenericAPIServer, &legacyStorageVersionMutator{version: buildapiv1.SchemeGroupVersion, storage: storage}, nil
+	return server.GenericAPIServer, &legacyStorageVersionMutator{version: buildapiv1.GroupVersion, storage: storage}, nil
 }
 
 func (c *completedConfig) withImageAPIServer(delegateAPIServer genericapiserver.DelegationTarget) (genericapiserver.DelegationTarget, legacyStorageMutator, error) {
@@ -315,7 +315,7 @@ func (c *completedConfig) withImageAPIServer(delegateAPIServer genericapiserver.
 	}
 	server.GenericAPIServer.PrepareRun() // this triggers openapi construction
 
-	return server.GenericAPIServer, &legacyStorageVersionMutator{version: imageapiv1.SchemeGroupVersion, storage: storage}, nil
+	return server.GenericAPIServer, &legacyStorageVersionMutator{version: imageapiv1.GroupVersion, storage: storage}, nil
 }
 
 func (c *completedConfig) withNetworkAPIServer(delegateAPIServer genericapiserver.DelegationTarget) (genericapiserver.DelegationTarget, legacyStorageMutator, error) {
@@ -337,7 +337,7 @@ func (c *completedConfig) withNetworkAPIServer(delegateAPIServer genericapiserve
 	}
 	server.GenericAPIServer.PrepareRun() // this triggers openapi construction
 
-	return server.GenericAPIServer, &legacyStorageVersionMutator{version: networkapiv1.SchemeGroupVersion, storage: storage}, nil
+	return server.GenericAPIServer, &legacyStorageVersionMutator{version: networkapiv1.GroupVersion, storage: storage}, nil
 }
 
 func (c *completedConfig) withOAuthAPIServer(delegateAPIServer genericapiserver.DelegationTarget) (genericapiserver.DelegationTarget, legacyStorageMutator, error) {
@@ -361,7 +361,7 @@ func (c *completedConfig) withOAuthAPIServer(delegateAPIServer genericapiserver.
 	}
 	server.GenericAPIServer.PrepareRun() // this triggers openapi construction
 
-	return server.GenericAPIServer, &legacyStorageVersionMutator{version: oauthapiv1.SchemeGroupVersion, storage: storage}, nil
+	return server.GenericAPIServer, &legacyStorageVersionMutator{version: oauthapiv1.GroupVersion, storage: storage}, nil
 }
 
 func (c *completedConfig) withProjectAPIServer(delegateAPIServer genericapiserver.DelegationTarget) (genericapiserver.DelegationTarget, legacyStorageMutator, error) {
@@ -390,7 +390,7 @@ func (c *completedConfig) withProjectAPIServer(delegateAPIServer genericapiserve
 	}
 	server.GenericAPIServer.PrepareRun() // this triggers openapi construction
 
-	return server.GenericAPIServer, &legacyStorageVersionMutator{version: projectapiv1.SchemeGroupVersion, storage: storage}, nil
+	return server.GenericAPIServer, &legacyStorageVersionMutator{version: projectapiv1.GroupVersion, storage: storage}, nil
 }
 
 func (c *completedConfig) withQuotaAPIServer(delegateAPIServer genericapiserver.DelegationTarget) (genericapiserver.DelegationTarget, legacyStorageMutator, error) {
@@ -415,7 +415,7 @@ func (c *completedConfig) withQuotaAPIServer(delegateAPIServer genericapiserver.
 	}
 	server.GenericAPIServer.PrepareRun() // this triggers openapi construction
 
-	return server.GenericAPIServer, &legacyStorageVersionMutator{version: quotaapiv1.SchemeGroupVersion, storage: storage}, nil
+	return server.GenericAPIServer, &legacyStorageVersionMutator{version: quotaapiv1.GroupVersion, storage: storage}, nil
 }
 
 func (c *completedConfig) withRouteAPIServer(delegateAPIServer genericapiserver.DelegationTarget) (genericapiserver.DelegationTarget, legacyStorageMutator, error) {
@@ -439,7 +439,7 @@ func (c *completedConfig) withRouteAPIServer(delegateAPIServer genericapiserver.
 	}
 	server.GenericAPIServer.PrepareRun() // this triggers openapi construction
 
-	return server.GenericAPIServer, &legacyStorageVersionMutator{version: routeapiv1.SchemeGroupVersion, storage: storage}, nil
+	return server.GenericAPIServer, &legacyStorageVersionMutator{version: routeapiv1.GroupVersion, storage: storage}, nil
 }
 
 func (c *completedConfig) withSecurityAPIServer(delegateAPIServer genericapiserver.DelegationTarget) (genericapiserver.DelegationTarget, legacyStorageMutator, error) {
@@ -468,7 +468,7 @@ func (c *completedConfig) withSecurityAPIServer(delegateAPIServer genericapiserv
 	}
 	server.GenericAPIServer.PrepareRun() // this triggers openapi construction
 
-	return server.GenericAPIServer, &legacyStorageVersionMutator{version: securityapiv1.SchemeGroupVersion, storage: storage}, nil
+	return server.GenericAPIServer, &legacyStorageVersionMutator{version: securityapiv1.GroupVersion, storage: storage}, nil
 }
 
 func (c *completedConfig) withTemplateAPIServer(delegateAPIServer genericapiserver.DelegationTarget) (genericapiserver.DelegationTarget, legacyStorageMutator, error) {
@@ -491,7 +491,7 @@ func (c *completedConfig) withTemplateAPIServer(delegateAPIServer genericapiserv
 	}
 	server.GenericAPIServer.PrepareRun() // this triggers openapi construction
 
-	return server.GenericAPIServer, &legacyStorageVersionMutator{version: templateapiv1.SchemeGroupVersion, storage: storage}, nil
+	return server.GenericAPIServer, &legacyStorageVersionMutator{version: templateapiv1.GroupVersion, storage: storage}, nil
 }
 
 func (c *completedConfig) withUserAPIServer(delegateAPIServer genericapiserver.DelegationTarget) (genericapiserver.DelegationTarget, legacyStorageMutator, error) {
@@ -513,7 +513,7 @@ func (c *completedConfig) withUserAPIServer(delegateAPIServer genericapiserver.D
 	}
 	server.GenericAPIServer.PrepareRun() // this triggers openapi construction
 
-	return server.GenericAPIServer, &legacyStorageVersionMutator{version: userapiv1.SchemeGroupVersion, storage: storage}, nil
+	return server.GenericAPIServer, &legacyStorageVersionMutator{version: userapiv1.GroupVersion, storage: storage}, nil
 }
 
 type apiServerAppenderFunc func(delegateAPIServer genericapiserver.DelegationTarget) (genericapiserver.DelegationTarget, legacyStorageMutator, error)

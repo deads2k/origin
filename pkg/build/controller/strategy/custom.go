@@ -46,7 +46,7 @@ func (bs *CustomBuildStrategy) CreateBuildPod(build *buildapi.Build) (*v1.Pod, e
 		return nil, errors.New("CustomBuildStrategy cannot be executed without CustomStrategy parameters")
 	}
 
-	codec := customBuildEncodingCodecFactory.LegacyCodec(buildv1.SchemeGroupVersion)
+	codec := customBuildEncodingCodecFactory.LegacyCodec(buildv1.GroupVersion)
 	if len(strategy.BuildAPIVersion) != 0 {
 		gv, err := schema.ParseGroupVersion(strategy.BuildAPIVersion)
 		if err != nil {

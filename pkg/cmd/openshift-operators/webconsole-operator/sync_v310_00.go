@@ -86,7 +86,7 @@ func ensureConfigMap_v310_00_to_00(c WebConsoleOperator, options webconsolev1alp
 		return nil, false, err
 	}
 
-	newWebConsoleConfig, err := runtime.Encode(webconsoleCodecs.LegacyCodec(webconsoleconfigv1.SchemeGroupVersion), requiredConfig)
+	newWebConsoleConfig, err := runtime.Encode(webconsoleCodecs.LegacyCodec(webconsoleconfigv1.GroupVersion), requiredConfig)
 	if err != nil {
 		return nil, false, err
 	}

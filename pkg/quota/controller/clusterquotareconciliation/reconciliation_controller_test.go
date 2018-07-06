@@ -275,12 +275,12 @@ func TestSyncFunc(t *testing.T) {
 		}
 
 		// the internal representation doesn't have json tags and I want a better diff, so converting
-		expectedV1, err := legacyscheme.Scheme.ConvertToVersion(tc.expectedQuota(), quotaapiv1.SchemeGroupVersion)
+		expectedV1, err := legacyscheme.Scheme.ConvertToVersion(tc.expectedQuota(), quotaapiv1.GroupVersion)
 		if err != nil {
 			t.Errorf("%s: unexpected error: %v", tc.name, err)
 			continue
 		}
-		actualV1, err := legacyscheme.Scheme.ConvertToVersion(actualQuota, quotaapiv1.SchemeGroupVersion)
+		actualV1, err := legacyscheme.Scheme.ConvertToVersion(actualQuota, quotaapiv1.GroupVersion)
 		if err != nil {
 			t.Errorf("%s: unexpected error: %v", tc.name, err)
 			continue

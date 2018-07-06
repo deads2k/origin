@@ -62,7 +62,7 @@ var (
 	// DeploymentConfigControllerRefKind contains the schema.GroupVersionKind for the
 	// deployment config. This is used in the ownerRef and GC client picks the appropriate
 	// client to get the deployment config.
-	DeploymentConfigControllerRefKind = appsapiv1.SchemeGroupVersion.WithKind("DeploymentConfig")
+	DeploymentConfigControllerRefKind = appsapiv1.GroupVersion.WithKind("DeploymentConfig")
 )
 
 // NewDeploymentCondition creates a new deployment condition.
