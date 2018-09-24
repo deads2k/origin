@@ -1,5 +1,5 @@
-hash: ac6dbd6bab6de923e6faddb7966a8b9e7b56d07183369819b85ec31f37a4971c
-updated: 2018-09-20T10:36:53.295613692-04:00
+hash: 381fc9c5d0fd090657e0f84fc31c9bedcb3a26d8c4725a49cbfbe02faac547b0
+updated: 2018-09-24T15:26:43.611894+02:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -817,7 +817,7 @@ imports:
   - go-selinux
   - go-selinux/label
 - name: github.com/openshift/api
-  version: 4507dcb6a81f6593aa336c5b47927cf0ae297b72
+  version: 739bd301126c341c6caddf2cb3e3935ae9e9fff9
   subpackages:
   - apps
   - apps/v1
@@ -983,8 +983,9 @@ imports:
   - signal
   - strslice
 - name: github.com/openshift/library-go
-  version: c45781559e320a91f9d392579bdbb757d8ebae72
+  version: 91ddbc425e02ec6b43b523dacae4a85b4f180e6b
   subpackages:
+  - pkg/assets
   - pkg/config/client
   - pkg/config/configdefaults
   - pkg/config/helpers
@@ -998,17 +999,17 @@ imports:
   - pkg/image/reference
   - pkg/network/networkapihelpers
   - pkg/operator/resource/resourceapply
-  - pkg/operator/resource/resourcecread
   - pkg/operator/resource/resourcemerge
+  - pkg/operator/resource/resourceread
   - pkg/operator/v1alpha1helpers
   - pkg/serviceability
 - name: github.com/openshift/service-serving-cert-signer
-  version: 847c7ab28fdd96ed1edb574900ca2d3e16b59afc
+  version: c0d4ae8417f9c819d2d7b645385228ea4b99f8cd
   subpackages:
   - pkg/controller/servingcert
   - pkg/controller/servingcert/cryptoextensions
 - name: github.com/openshift/source-to-image
-  version: 8f7dcac0d9fd3fcb97d7c251dc9dd60fe47bb101
+  version: ec6ef8b68962b8f9c944b2e25dd8a26a1e82aad3
   subpackages:
   - pkg/api
   - pkg/api/constants
@@ -1089,10 +1090,8 @@ imports:
   - client
 - name: github.com/RangelReale/osin
   version: 2dc1b43167692cdc89446b99b98fa9de6bff020f
-  repo: https://github.com/openshift/osin.git
 - name: github.com/RangelReale/osincli
   version: fababb0555f21315d1a34af6615a16eaab44396b
-  repo: https://github.com/openshift/osincli.git
 - name: github.com/renstrom/dedent
   version: 020d11c3b9c0c7a3c2efcc8e5cf5b9ef7bcea21f
 - name: github.com/robfig/cron
@@ -1880,7 +1879,7 @@ imports:
   - pkg/util/proto/testing
   - pkg/util/proto/validation
 - name: k8s.io/kubernetes
-  version: 2799b210909994efea7a9098f7c31db425b77ba9
+  version: f60e56e6c55d81008b10ca879b7f5bafe30ef74c
   repo: https://github.com/openshift/kubernetes.git
   subpackages:
   - cmd/controller-manager/app
