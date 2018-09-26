@@ -59,17 +59,22 @@ func (c *ClusterUpConfig) StartSelfHosted(out io.Writer) error {
 	}
 
 	glog.Info("Bootkube phase-1 kube-apiserver is ready. Going to call bootkube start ...")
-	bk := &bootkube.BootkubeRunConfig{
-		BootkubeImage:        OpenShiftImages.Get("bootkube").ToPullSpec(c.ImageTemplate).String(),
-		StaticPodManifestDir: configDirs.podManifestDir,
-		AssetsDir:            configDirs.assetsDir,
-		ContainerBinds: []string{
-			fmt.Sprintf("%s:/etc/kubernetes:z", filepath.Join(c.BaseDir, "kubernetes")),
-		},
-	}
-	if _, err := bk.RunStart(c.DockerClient()); err != nil {
-		return err
-	}
+	go func() {
+		bk := &bootkube.BootkubeRunConfig{
+			BootkubeImage:        OpenShiftImages.Get("bootkube").ToPullSpec(c.ImageTemplate).String(),
+			StaticPodManifestDir: configDirs.podManifestDir,
+			AssetsDir:            configDirs.assetsDir,
+			ContainerBinds: []string{
+				fmt.Sprintf("%s:/etc/kubernetes:z", filepath.Join(c.BaseDir, "kubernetes")),
+			},
+		}
+		if _, err := bk.RunStart(c.DockerClient()); err != nil {
+			panic(err)
+		}
+	}()
+
+	// wait for a bit, we'll probably have the kubeconfig by this point
+	time.Sleep(10 * time.Second)
 
 	clientConfigBuilder, err := kclientcmd.LoadFromFile(filepath.Join(c.BaseDir, "assets", "auth", "admin.kubeconfig"))
 	if err != nil {
