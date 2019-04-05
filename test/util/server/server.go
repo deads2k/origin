@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -17,6 +18,7 @@ import (
 
 	etcdclientv3 "github.com/coreos/etcd/clientv3"
 	"github.com/golang/glog"
+	"github.com/openshift/library-go/pkg/assets/create"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -454,9 +456,18 @@ func startKubernetesAPIServer(masterConfig *configapi.MasterConfig, clientConfig
 		}
 	}()
 
-	url, err := url.Parse(fmt.Sprintf("https://%s", masterConfig.ServingInfo.BindAddress))
-	if err := waitForServerHealthy(url); err != nil {
+	serverURL, err := url.Parse(fmt.Sprintf("https://%s", masterConfig.ServingInfo.BindAddress))
+	if err := waitForServerHealthy(serverURL); err != nil {
 		return fmt.Errorf("Waiting for Kubernetes API /healthz failed with: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.TODO(), 30*time.Second)
+	defer cancel()
+
+	if err := create.EnsureManifestsCreated(ctx, "testdata/crds", clientConfig, create.CreateOptions{
+		Verbose: true,
+	}); err != nil {
+		return err
 	}
 
 	return nil
