@@ -111,16 +111,13 @@ func (o *CommitParseOptions) Run() error {
 		for _, currLastYear := range lastYearSlice {
 			for contributor, commits := range currLastYear.(map[string]interface{}) {
 				currVal := lastYearContributorCommits[contributor]
-				fmt.Printf("%q, %d\n", contributor, commits)
 				lastYearContributorCommits[contributor] = currVal + int(commits.(float64))
 			}
 		}
 	}
 
 	for contributor, commits := range lastYearContributorCommits {
-		if false {
-			fmt.Printf("%q, %d\n", contributor, commits)
-		}
+		fmt.Printf("%q, %d\n", contributor, commits)
 	}
 
 	return nil
