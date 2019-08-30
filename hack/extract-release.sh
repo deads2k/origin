@@ -13,4 +13,3 @@ os::build::archive::extract_tar "${OS_PRIMARY_RELEASE_TAR}" "${OS_OUTPUT_BINPATH
 os::build::archive::extract_tar "${OS_CLIENT_RELEASE_TAR}" "${OS_OUTPUT_BINPATH}/$(os::build::host_platform)"
 os::build::archive::extract_tar "${OS_IMAGE_RELEASE_TAR}" "${OS_OUTPUT_BINPATH}/$(os::build::host_platform)"
 
-os::build::make_openshift_binary_symlinks

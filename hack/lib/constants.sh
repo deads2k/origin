@@ -35,40 +35,10 @@ readonly OS_SCRATCH_IMAGE_COMPILE_TARGETS_LINUX=(
 )
 readonly OS_IMAGE_COMPILE_BINARIES=("${OS_SCRATCH_IMAGE_COMPILE_TARGETS_LINUX[@]##*/}" "${OS_IMAGE_COMPILE_TARGETS_LINUX[@]##*/}")
 
-readonly OS_CROSS_COMPILE_TARGETS=(
-  vendor/github.com/openshift/oc/cmd/oc
-)
-readonly OS_CROSS_COMPILE_BINARIES=("${OS_CROSS_COMPILE_TARGETS[@]##*/}")
-
 readonly OS_GOVET_BLACKLIST=(
 )
 
 #If you update this list, be sure to get the images/origin/Dockerfile
-readonly OPENSHIFT_BINARY_SYMLINKS=(
-)
-readonly OC_BINARY_SYMLINKS=(
-)
-readonly OC_BINARY_COPY=(
-  kubectl
-)
-readonly OS_BINARY_RELEASE_CLIENT_WINDOWS=(
-  oc.exe
-  kubectl.exe
-  README.md
-  ./LICENSE
-)
-readonly OS_BINARY_RELEASE_CLIENT_MAC=(
-  oc
-  kubectl
-  README.md
-  ./LICENSE
-)
-readonly OS_BINARY_RELEASE_CLIENT_LINUX=(
-  ./oc
-  ./kubectl
-  ./README.md
-  ./LICENSE
-)
 readonly OS_BINARY_RELEASE_SERVER_LINUX=(
   './*'
 )
@@ -247,69 +217,6 @@ function os::util::list_test_packages_under() {
     fi
 }
 readonly -f os::util::list_test_packages_under
-
-# Generates the .syso file used to add compile-time VERSIONINFO metadata to the
-# Windows binary.
-function os::build::generate_windows_versioninfo() {
-  os::build::version::get_vars
-  local major="${OS_GIT_MAJOR}"
-  local minor="${OS_GIT_MINOR%+}"
-  local patch="${OS_GIT_PATCH}"
-  local windows_versioninfo_file=`mktemp --suffix=".versioninfo.json"`
-  cat <<EOF >"${windows_versioninfo_file}"
-{
-       "FixedFileInfo":
-       {
-               "FileVersion": {
-                       "Major": ${major},
-                       "Minor": ${minor},
-                       "Patch": ${patch}
-               },
-               "ProductVersion": {
-                       "Major": ${major},
-                       "Minor": ${minor},
-                       "Patch": ${patch}
-               },
-               "FileFlagsMask": "3f",
-               "FileFlags ": "00",
-               "FileOS": "040004",
-               "FileType": "01",
-               "FileSubType": "00"
-       },
-       "StringFileInfo":
-       {
-               "Comments": "",
-               "CompanyName": "Red Hat, Inc.",
-               "InternalName": "openshift client",
-               "FileVersion": "${OS_GIT_VERSION}",
-               "InternalName": "oc",
-               "LegalCopyright": "© Red Hat, Inc. Licensed under the Apache License, Version 2.0",
-               "LegalTrademarks": "",
-               "OriginalFilename": "oc.exe",
-               "PrivateBuild": "",
-               "ProductName": "OpenShift Client",
-               "ProductVersion": "${OS_GIT_VERSION}",
-               "SpecialBuild": ""
-       },
-       "VarFileInfo":
-       {
-               "Translation": {
-                       "LangID": "0409",
-                       "CharsetID": "04B0"
-               }
-       }
-}
-EOF
-  goversioninfo -o ${OS_ROOT}/vendor/github.com/openshift/oc/cmd/oc/oc.syso ${windows_versioninfo_file}
-}
-readonly -f os::build::generate_windows_versioninfo
-
-# Removes the .syso file used to add compile-time VERSIONINFO metadata to the
-# Windows binary.
-function os::build::clean_windows_versioninfo() {
-  rm ${OS_ROOT}/vendor/github.com/openshift/oc/cmd/oc/oc.syso
-}
-readonly -f os::build::clean_windows_versioninfo
 
 # OS_ALL_IMAGES is the list of images built by os::build::images.
 readonly OS_ALL_IMAGES=(

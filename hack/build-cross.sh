@@ -15,7 +15,7 @@ platforms=(
 image_platforms=( )
 test_platforms=( "${host_platform}" )
 
-targets=( "${OS_CROSS_COMPILE_TARGETS[@]}" )
+targets=( )
 
 # Special case ppc64le
 if [[ "${host_platform}" == "linux/ppc64le" ]]; then
@@ -71,28 +71,8 @@ OS_BUILD_PLATFORMS=("${image_platforms[@]+"${image_platforms[@]}"}")
 os::build::build_static_binaries "${OS_SCRATCH_IMAGE_COMPILE_TARGETS_LINUX[@]-}"
 os::build::build_binaries "${OS_IMAGE_COMPILE_TARGETS_LINUX[@]-}"
 
-# Build the primary client/server for all platforms
-OS_BUILD_PLATFORMS=("${platforms[@]+"${platforms[@]}"}")
-os::build::build_binaries "${OS_CROSS_COMPILE_TARGETS[@]}"
-
 if [[ "${OS_BUILD_RELEASE_ARCHIVES-}" != "n" ]]; then
-  # Make the primary client/server release.
-  OS_BUILD_PLATFORMS=("${platforms[@]+"${platforms[@]}"}")
-  OS_RELEASE_ARCHIVE="openshift-origin" \
-    os::build::place_bins "${OS_CROSS_COMPILE_BINARIES[@]}"
-
-  # Make the image binaries release.
-  OS_BUILD_PLATFORMS=("${image_platforms[@]+"${image_platforms[@]}"}")
-  OS_RELEASE_ARCHIVE="openshift-origin-image" \
-    os::build::place_bins "${OS_IMAGE_COMPILE_BINARIES[@]}"
-
   os::build::release_sha
-else
-  # Place binaries only
-  OS_BUILD_PLATFORMS=("${platforms[@]+"${platforms[@]}"}")
-  os::build::place_bins "${OS_CROSS_COMPILE_BINARIES[@]}"
-  OS_BUILD_PLATFORMS=("${image_platforms[@]+"${image_platforms[@]}"}")
-  os::build::place_bins "${OS_IMAGE_COMPILE_BINARIES[@]}"
 fi
 
 if [[ "${OS_GIT_TREE_STATE:-dirty}" == "clean"  ]]; then
