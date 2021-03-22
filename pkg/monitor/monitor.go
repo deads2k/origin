@@ -141,6 +141,7 @@ func (m *Monitor) EventIntervals(from, to time.Time) monitorapi.EventIntervals {
 	intervals = append(intervals, intervalcreation.IntervalsFromEvents_OperatorAvailable(events, from, to)...)
 	intervals = append(intervals, intervalcreation.IntervalsFromEvents_OperatorProgressing(events, from, to)...)
 	intervals = append(intervals, intervalcreation.IntervalsFromEvents_OperatorDegraded(events, from, to)...)
+	intervals = append(intervals, intervalcreation.IntervalsFromEvents_E2ETests(events, from, to)...)
 
 	// merge the two sets of inputs
 	mustSort := len(intervals) > 0
